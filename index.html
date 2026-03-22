@@ -9,7 +9,6 @@
 <style>
 /* ── Themes ────────────────────────────────────────────────── */
 
-/* Parchment — warm light scholarly */
 [data-theme="parchment"] {
   --bg:           #f5f0e8;
   --surface:      #faf7f2;
@@ -31,7 +30,6 @@
   --shadow:       0 4px 24px rgba(0,0,0,0.12);
 }
 
-/* Folio — original dark scholarly, gold accents */
 [data-theme="folio"] {
   --bg:           #111009;
   --surface:      #181610;
@@ -53,7 +51,6 @@
   --shadow:       0 4px 24px rgba(0,0,0,0.6);
 }
 
-/* Obsidian — pure dark, high contrast */
 [data-theme="obsidian"] {
   --bg:           #0d0d0f;
   --surface:      #141417;
@@ -75,7 +72,6 @@
   --shadow:       0 4px 24px rgba(0,0,0,0.7);
 }
 
-/* Modern — clean neutral UI */
 [data-theme="modern"] {
   --bg:           #f8f9fa;
   --surface:      #ffffff;
@@ -100,7 +96,6 @@
 /* ── Reset ─────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ── Base ──────────────────────────────────────────────────── */
 body {
   background: var(--bg);
   color: var(--text);
@@ -133,7 +128,6 @@ header {
   color: var(--text);
   flex-shrink: 0;
 }
-
 .wordmark em {
   font-style: italic;
   font-weight: 400;
@@ -169,14 +163,10 @@ input#apiKey:focus { border-color: var(--left-accent); }
 input#apiKey::placeholder { color: var(--text-faint); }
 
 /* ── Theme switcher ────────────────────────────────────────── */
-.theme-btns {
-  display: flex;
-  gap: 4px;
-}
+.theme-btns { display: flex; gap: 4px; }
 
 .theme-btn {
-  width: 18px;
-  height: 18px;
+  width: 18px; height: 18px;
   border-radius: 50%;
   border: 2px solid transparent;
   cursor: pointer;
@@ -190,11 +180,7 @@ input#apiKey::placeholder { color: var(--text-faint); }
 .theme-btn[data-t="modern"]    { background: #f8f9fa; border: 1px solid #ccc; }
 
 /* ── Toolbar ───────────────────────────────────────────────── */
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
+.toolbar { display: flex; align-items: center; gap: 12px; }
 
 .icon-btn {
   background: none;
@@ -283,7 +269,7 @@ textarea.sys-prompt {
   line-height: 1.5;
 }
 textarea.sys-prompt::placeholder { color: var(--text-faint); }
-textarea.sys-prompt:focus { border-color: var(--border); color: var(--text); }
+textarea.sys-prompt:focus { color: var(--text); }
 
 .btn-clear {
   background: none;
@@ -308,7 +294,6 @@ textarea.sys-prompt:focus { border-color: var(--border); color: var(--text); }
   flex-direction: column;
   gap: 12px;
 }
-
 .messages::-webkit-scrollbar       { width: 3px; }
 .messages::-webkit-scrollbar-track { background: transparent; }
 .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -336,7 +321,6 @@ textarea.sys-prompt:focus { border-color: var(--border); color: var(--text); }
 }
 
 .msg.user { align-items: flex-end; }
-.msg.user .msg-role { color: var(--text-faint); }
 
 .msg-body {
   max-width: 88%;
@@ -364,7 +348,25 @@ textarea.sys-prompt:focus { border-color: var(--border); color: var(--text); }
   align-self: flex-start;
 }
 
-/* ── Cross-send button ─────────────────────────────────────── */
+/* ── Attachment thumbnail in message ───────────────────────── */
+.msg-attachment {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 4px 8px;
+  margin-bottom: 6px;
+  align-self: flex-end;
+  max-width: 88%;
+}
+.msg-attachment span { opacity: 0.6; }
+
+/* ── Cross-send ────────────────────────────────────────────── */
 .cross-send {
   align-self: flex-start;
   background: none;
@@ -383,26 +385,15 @@ textarea.sys-prompt:focus { border-color: var(--border); color: var(--text); }
 .pane-right .cross-send:hover { border-color: var(--left-accent);  color: var(--left-accent); }
 
 /* ── Thinking ──────────────────────────────────────────────── */
-.thinking {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 0;
-  animation: fadeUp 0.2s ease;
-}
-
+.thinking { display: flex; align-items: center; gap: 6px; padding: 8px 0; animation: fadeUp 0.2s ease; }
 .thinking-dots { display: flex; gap: 4px; }
-
 .thinking-dot {
-  width: 5px;
-  height: 5px;
+  width: 5px; height: 5px;
   border-radius: 50%;
   animation: pulse 1.2s ease-in-out infinite;
 }
-
 .pane-left  .thinking-dot { background: var(--left-accent); }
 .pane-right .thinking-dot { background: var(--right-accent); }
-
 .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
 .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
 
@@ -422,7 +413,6 @@ textarea.sys-prompt:focus { border-color: var(--border); color: var(--text); }
   font-size: 11.5px;
   line-height: 1.6;
 }
-
 .msg-body code {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 11.5px;
@@ -430,9 +420,7 @@ textarea.sys-prompt:focus { border-color: var(--border); color: var(--text); }
   padding: 1px 5px;
   border-radius: 3px;
 }
-
 .msg-body pre code { background: none; padding: 0; }
-
 .msg-body p { margin-bottom: 8px; }
 .msg-body p:last-child { margin-bottom: 0; }
 .msg-body h1, .msg-body h2, .msg-body h3 {
@@ -475,7 +463,6 @@ textarea.sys-prompt:focus { border-color: var(--border); color: var(--text); }
   gap: 8px;
   margin-bottom: 10px;
 }
-
 .route-label {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 10px;
@@ -483,7 +470,6 @@ textarea.sys-prompt:focus { border-color: var(--border); color: var(--text); }
   text-transform: uppercase;
   color: var(--text-faint);
 }
-
 .route-btns { display: flex; gap: 4px; }
 
 .route-btn {
@@ -510,11 +496,65 @@ textarea.sys-prompt:focus { border-color: var(--border); color: var(--text); }
   margin-left: auto;
 }
 
+/* ── Attachment strip ──────────────────────────────────────── */
+#attach-strip {
+  display: none;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+#attach-strip.has-files { display: flex; }
+
+.attach-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  padding: 3px 8px;
+  animation: fadeUp 0.15s ease;
+}
+.attach-pill .pill-name { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attach-pill .pill-type { opacity: 0.45; }
+.attach-pill .pill-rm {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0 0 0 2px;
+  transition: color 0.15s;
+}
+.attach-pill .pill-rm:hover { color: #e05c5c; }
+
+/* ── Compose row ───────────────────────────────────────────── */
 .compose-row {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: flex-end;
 }
+
+.attach-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 12px;
+  height: 52px;
+  transition: border-color 0.15s, color 0.15s;
+  flex-shrink: 0;
+  align-self: flex-end;
+  display: flex;
+  align-items: center;
+}
+.attach-btn:hover { border-color: var(--text-dim); color: var(--text); }
 
 textarea#prompt {
   flex: 1;
@@ -617,7 +657,15 @@ textarea#prompt::placeholder { color: var(--text-faint); }
     </div>
     <span class="status" id="status">Ready</span>
   </div>
+
+  <!-- Attachment strip -->
+  <div id="attach-strip"></div>
+
   <div class="compose-row">
+    <button class="attach-btn" onclick="document.getElementById('fileInput').click()" title="Attach file">📎</button>
+    <input type="file" id="fileInput" style="display:none" multiple
+           accept="image/*,.pdf,.txt,.md,.csv,.json,.js,.ts,.py,.rb,.go,.rs,.java,.c,.cpp,.h,.css,.html,.xml,.yaml,.yml,.sh"
+           onchange="attachFiles(this.files)">
     <textarea id="prompt" placeholder="State the problem, sketch the architecture, start the argument…" rows="2"></textarea>
     <button class="send-btn" id="sendBtn" onclick="send()">Send</button>
   </div>
@@ -625,16 +673,17 @@ textarea#prompt::placeholder { color: var(--text-faint); }
 
 <script>
 // ── State ─────────────────────────────────────────────────────
-const histories = { left: [], right: [] };
-let route = 'both';
-let busy  = false;
+const histories   = { left: [], right: [] };
+let   route       = 'both';
+let   busy        = false;
+let   pendingFiles = [];   // [{ name, kind, mediaType, data }]
+// kind: 'image' | 'document' | 'text'
+// data: base64 string (image/pdf) or plain text string
 
 // ── Theme ─────────────────────────────────────────────────────
 function setTheme(t) {
   document.documentElement.setAttribute('data-theme', t);
-  document.querySelectorAll('.theme-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.t === t);
-  });
+  document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.t === t));
   localStorage.setItem('duel_theme', t);
 }
 
@@ -652,15 +701,92 @@ function clearPane(side) {
   document.getElementById('msgs-' + side).innerHTML = '';
 }
 
+// ── File attachment ───────────────────────────────────────────
+const IMAGE_TYPES = ['image/jpeg','image/png','image/gif','image/webp'];
+const PDF_TYPE    = 'application/pdf';
+
+function attachFiles(fileList) {
+  Array.from(fileList).forEach(f => {
+    const reader = new FileReader();
+    if (IMAGE_TYPES.includes(f.type)) {
+      reader.onload = e => {
+        const b64 = e.target.result.split(',')[1];
+        pendingFiles.push({ name: f.name, kind: 'image', mediaType: f.type, data: b64 });
+        renderStrip();
+      };
+      reader.readAsDataURL(f);
+    } else if (f.type === PDF_TYPE) {
+      reader.onload = e => {
+        const b64 = e.target.result.split(',')[1];
+        pendingFiles.push({ name: f.name, kind: 'document', mediaType: PDF_TYPE, data: b64 });
+        renderStrip();
+      };
+      reader.readAsDataURL(f);
+    } else {
+      // Text / code — read as plain text
+      reader.onload = e => {
+        pendingFiles.push({ name: f.name, kind: 'text', mediaType: f.type || 'text/plain', data: e.target.result });
+        renderStrip();
+      };
+      reader.readAsText(f);
+    }
+  });
+  // Reset so the same file can be re-attached
+  document.getElementById('fileInput').value = '';
+}
+
+function removeFile(idx) {
+  pendingFiles.splice(idx, 1);
+  renderStrip();
+}
+
+function renderStrip() {
+  const strip = document.getElementById('attach-strip');
+  strip.innerHTML = '';
+  strip.classList.toggle('has-files', pendingFiles.length > 0);
+  pendingFiles.forEach((f, i) => {
+    const pill = document.createElement('div');
+    pill.className = 'attach-pill';
+    const icon = f.kind === 'image' ? '🖼' : f.kind === 'document' ? '📄' : '📝';
+    pill.innerHTML = `
+      <span>${icon}</span>
+      <span class="pill-name">${escHtml(f.name)}</span>
+      <span class="pill-type">${f.kind}</span>
+      <button class="pill-rm" onclick="removeFile(${i})" title="Remove">✕</button>`;
+    strip.appendChild(pill);
+  });
+}
+
+// ── Build API content array for a user turn ───────────────────
+function buildContent(text, attachments) {
+  if (!attachments || attachments.length === 0) return text;
+
+  const parts = [];
+
+  attachments.forEach(f => {
+    if (f.kind === 'image') {
+      parts.push({ type: 'image', source: { type: 'base64', media_type: f.mediaType, data: f.data } });
+    } else if (f.kind === 'document') {
+      parts.push({ type: 'document', source: { type: 'base64', media_type: f.mediaType, data: f.data } });
+    } else {
+      // Prepend text file content inline
+      parts.push({ type: 'text', text: `\`\`\`\n// ${f.name}\n${f.data}\n\`\`\`` });
+    }
+  });
+
+  if (text) parts.push({ type: 'text', text });
+  return parts;
+}
+
 // ── Markdown renderer ─────────────────────────────────────────
 function renderMd(text) {
+  if (typeof text !== 'string') return '';
   const blocks = [];
   text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
     const i = blocks.length;
     blocks.push(`<pre><code>${escHtml(code.trim())}</code></pre>`);
     return `\x00BLOCK${i}\x00`;
   });
-
   text = text
     .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
@@ -671,39 +797,46 @@ function renderMd(text) {
     .replace(/^# (.+)$/gm, '<h1>$1</h1>')
     .replace(/^---+$/gm, '<hr>')
     .replace(/^\s*[-*]\s+(.+)$/gm, '<li>$1</li>');
-
   text = text.replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`);
-
   text = text.split(/\n\n+/).map(p => {
     p = p.trim();
     if (!p || p.startsWith('<h') || p.startsWith('<ul') || p.startsWith('<hr') || p.startsWith('\x00')) return p;
     return `<p>${p.replace(/\n/g, '<br>')}</p>`;
   }).join('\n');
-
   blocks.forEach((b, i) => { text = text.replace(`\x00BLOCK${i}\x00`, b); });
   return text;
 }
 
 function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 // ── Append message ────────────────────────────────────────────
-function appendMsg(side, role, content) {
+function appendMsg(side, role, content, attachments) {
   const container = document.getElementById('msgs-' + side);
-
-  const wrapper = document.createElement('div');
+  const wrapper   = document.createElement('div');
   wrapper.className = `msg ${role}`;
 
   const roleEl = document.createElement('div');
   roleEl.className = 'msg-role';
   roleEl.textContent = role === 'user' ? 'you' : side === 'left' ? 'α' : 'β';
 
+  wrapper.appendChild(roleEl);
+
+  // Show attachment pills in the message bubble (user messages only)
+  if (role === 'user' && attachments && attachments.length > 0) {
+    attachments.forEach(f => {
+      const pill = document.createElement('div');
+      pill.className = 'msg-attachment';
+      const icon = f.kind === 'image' ? '🖼' : f.kind === 'document' ? '📄' : '📝';
+      pill.innerHTML = `<span>${icon}</span> <span>${escHtml(f.name)}</span> <span>${f.kind}</span>`;
+      wrapper.appendChild(pill);
+    });
+  }
+
   const body = document.createElement('div');
   body.className = 'msg-body';
-  body.innerHTML = renderMd(content);
-
-  wrapper.appendChild(roleEl);
+  body.innerHTML = renderMd(typeof content === 'string' ? content : '[multipart message]');
   wrapper.appendChild(body);
 
   if (role === 'assistant') {
@@ -727,9 +860,7 @@ function showThinking(side) {
   el.className = 'thinking';
   el.id = 'thinking-' + side;
   el.innerHTML = `<div class="thinking-dots">
-    <div class="thinking-dot"></div>
-    <div class="thinking-dot"></div>
-    <div class="thinking-dot"></div>
+    <div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div>
   </div>`;
   container.appendChild(el);
   container.scrollTop = container.scrollHeight;
@@ -750,17 +881,16 @@ function showError(side, msg) {
   container.scrollTop = container.scrollHeight;
 }
 
-function setStatus(msg) {
-  document.getElementById('status').textContent = msg;
-}
+function setStatus(msg) { document.getElementById('status').textContent = msg; }
 
 // ── Claude API call ───────────────────────────────────────────
-async function callClaude(side, userMsg) {
+async function callClaude(side, userText, attachments) {
   const apiKey = document.getElementById('apiKey').value.trim();
   const model  = document.getElementById('model-' + side).value;
   const sys    = document.getElementById('sys-' + side).value.trim();
 
-  histories[side].push({ role: 'user', content: userMsg });
+  const content = buildContent(userText, attachments);
+  histories[side].push({ role: 'user', content });
 
   const body = { model, max_tokens: 2048, messages: histories[side] };
   if (sys) body.system = sys;
@@ -791,9 +921,11 @@ async function callClaude(side, userMsg) {
 async function send() {
   if (busy) return;
 
-  const promptEl = document.getElementById('prompt');
-  const prompt = promptEl.value.trim();
-  if (!prompt) return;
+  const promptEl  = document.getElementById('prompt');
+  const prompt    = promptEl.value.trim();
+  const attachments = [...pendingFiles];
+
+  if (!prompt && attachments.length === 0) return;
 
   const apiKey = document.getElementById('apiKey').value.trim();
   if (!apiKey) { setStatus('⚠ Enter API key'); return; }
@@ -804,14 +936,19 @@ async function send() {
   document.getElementById('sendBtn').disabled = true;
   promptEl.value = '';
   promptEl.style.height = 'auto';
+
+  // Clear pending files
+  pendingFiles = [];
+  renderStrip();
+
   setStatus('Thinking…');
 
-  sides.forEach(s => appendMsg(s, 'user', prompt));
+  sides.forEach(s => appendMsg(s, 'user', prompt, attachments));
   sides.forEach(s => showThinking(s));
 
   try {
     await Promise.all(sides.map(s =>
-      callClaude(s, prompt)
+      callClaude(s, prompt, attachments)
         .then(text => { hideThinking(s); appendMsg(s, 'assistant', text); })
         .catch(err  => { hideThinking(s); showError(s, err.message); })
     ));
@@ -864,12 +1001,18 @@ function exportMd() {
 
   md += `## α Alpha\n\n`;
   histories.left.forEach(m => {
-    md += `**${m.role === 'user' ? 'You' : 'α'}:** ${m.content}\n\n`;
+    const text = Array.isArray(m.content)
+      ? m.content.filter(p => p.type === 'text').map(p => p.text).join('\n')
+      : m.content;
+    md += `**${m.role === 'user' ? 'You' : 'α'}:** ${text}\n\n`;
   });
 
   md += `---\n\n## β Beta\n\n`;
   histories.right.forEach(m => {
-    md += `**${m.role === 'user' ? 'You' : 'β'}:** ${m.content}\n\n`;
+    const text = Array.isArray(m.content)
+      ? m.content.filter(p => p.type === 'text').map(p => p.text).join('\n')
+      : m.content;
+    md += `**${m.role === 'user' ? 'You' : 'β'}:** ${text}\n\n`;
   });
 
   const blob = new Blob([md], { type: 'text/markdown' });
@@ -886,6 +1029,16 @@ const promptEl = document.getElementById('prompt');
 promptEl.addEventListener('input', () => {
   promptEl.style.height = 'auto';
   promptEl.style.height = Math.min(promptEl.scrollHeight, 180) + 'px';
+});
+
+// ── Drag-and-drop onto input area ─────────────────────────────
+const inputArea = document.querySelector('.input-area');
+inputArea.addEventListener('dragover', e => { e.preventDefault(); inputArea.style.outline = '2px dashed var(--left-accent)'; });
+inputArea.addEventListener('dragleave', () => { inputArea.style.outline = ''; });
+inputArea.addEventListener('drop', e => {
+  e.preventDefault();
+  inputArea.style.outline = '';
+  if (e.dataTransfer.files.length) attachFiles(e.dataTransfer.files);
 });
 
 // ── Persist settings ──────────────────────────────────────────
