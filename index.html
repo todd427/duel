@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="folio">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Duel — Two Minds, One Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+/* ── Themes ────────────────────────────────────────────────── */
+
+/* Parchment — warm light scholarly */
+[data-theme="parchment"] {
+  --bg:           #f5f0e8;
+  --surface:      #faf7f2;
+  --surface2:     #ede9e0;
+  --border:       rgba(0,0,0,0.1);
+  --text:         #2c2416;
+  --text-dim:     rgba(44,36,22,0.5);
+  --text-faint:   rgba(44,36,22,0.25);
+  --left-accent:  #1a7a6e;
+  --left-bg:      rgba(26,122,110,0.07);
+  --left-border:  rgba(26,122,110,0.3);
+  --right-accent: #8a6a1f;
+  --right-bg:     rgba(138,106,31,0.07);
+  --right-border: rgba(138,106,31,0.3);
+  --send-bg:      #2c2416;
+  --send-fg:      #f5f0e8;
+  --tag-bg:       rgba(0,0,0,0.05);
+  --code-bg:      rgba(0,0,0,0.06);
+  --shadow:       0 4px 24px rgba(0,0,0,0.12);
+}
+
+/* Folio — original dark scholarly, gold accents */
+[data-theme="folio"] {
+  --bg:           #111009;
+  --surface:      #181610;
+  --surface2:     #1f1c14;
+  --border:       rgba(255,255,255,0.07);
+  --text:         #e2d9c4;
+  --text-dim:     rgba(226,217,196,0.45);
+  --text-faint:   rgba(226,217,196,0.18);
+  --left-accent:  #4ec9b0;
+  --left-bg:      rgba(78,201,176,0.07);
+  --left-border:  rgba(78,201,176,0.22);
+  --right-accent: #c8a655;
+  --right-bg:     rgba(200,166,85,0.07);
+  --right-border: rgba(200,166,85,0.25);
+  --send-bg:      #e2d9c4;
+  --send-fg:      #111009;
+  --tag-bg:       rgba(255,255,255,0.05);
+  --code-bg:      rgba(0,0,0,0.35);
+  --shadow:       0 4px 24px rgba(0,0,0,0.6);
+}
+
+/* Obsidian — pure dark, high contrast */
+[data-theme="obsidian"] {
+  --bg:           #0d0d0f;
+  --surface:      #141417;
+  --surface2:     #1a1a1f;
+  --border:       rgba(255,255,255,0.07);
+  --text:         #e8eaf0;
+  --text-dim:     rgba(232,234,240,0.45);
+  --text-faint:   rgba(232,234,240,0.18);
+  --left-accent:  #4ec9b0;
+  --left-bg:      rgba(78,201,176,0.07);
+  --left-border:  rgba(78,201,176,0.25);
+  --right-accent: #c792ea;
+  --right-bg:     rgba(199,146,234,0.07);
+  --right-border: rgba(199,146,234,0.25);
+  --send-bg:      #e8eaf0;
+  --send-fg:      #0d0d0f;
+  --tag-bg:       rgba(255,255,255,0.05);
+  --code-bg:      rgba(0,0,0,0.4);
+  --shadow:       0 4px 24px rgba(0,0,0,0.7);
+}
+
+/* Modern — clean neutral UI */
+[data-theme="modern"] {
+  --bg:           #f8f9fa;
+  --surface:      #ffffff;
+  --surface2:     #f0f2f5;
+  --border:       rgba(0,0,0,0.08);
+  --text:         #1a1d23;
+  --text-dim:     rgba(26,29,35,0.5);
+  --text-faint:   rgba(26,29,35,0.25);
+  --left-accent:  #0066ff;
+  --left-bg:      rgba(0,102,255,0.06);
+  --left-border:  rgba(0,102,255,0.2);
+  --right-accent: #e6450a;
+  --right-bg:     rgba(230,69,10,0.06);
+  --right-border: rgba(230,69,10,0.2);
+  --send-bg:      #1a1d23;
+  --send-fg:      #ffffff;
+  --tag-bg:       rgba(0,0,0,0.04);
+  --code-bg:      rgba(0,0,0,0.05);
+  --shadow:       0 2px 12px rgba(0,0,0,0.08);
+}
+
+/* ── Reset ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Base ──────────────────────────────────────────────────── */
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 14px;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: background 0.3s, color 0.3s;
+}
+
+/* ── Header ────────────────────────────────────────────────── */
+header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 20px;
+  height: 52px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.wordmark {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.wordmark em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--text-dim);
+  font-size: 13px;
+  margin-left: 8px;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+.header-spacer { flex: 1; }
+
+.api-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+  text-transform: uppercase;
+}
+
+input#apiKey {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  padding: 6px 10px;
+  width: 220px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input#apiKey:focus { border-color: var(--left-accent); }
+input#apiKey::placeholder { color: var(--text-faint); }
+
+/* ── Theme switcher ────────────────────────────────────────── */
+.theme-btns {
+  display: flex;
+  gap: 4px;
+}
+
+.theme-btn {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.theme-btn:hover { transform: scale(1.15); }
+.theme-btn.active { border-color: var(--text); }
+.theme-btn[data-t="parchment"] { background: #f5f0e8; }
+.theme-btn[data-t="folio"]     { background: #111009; }
+.theme-btn[data-t="obsidian"]  { background: #0d0d0f; }
+.theme-btn[data-t="modern"]    { background: #f8f9fa; border: 1px solid #ccc; }
+
+/* ── Toolbar ───────────────────────────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.icon-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 10px;
+  font-family: 'IBM Plex Mono', monospace;
+  transition: border-color 0.15s, color 0.15s;
+}
+.icon-btn:hover { border-color: var(--text-dim); color: var(--text); }
+
+/* ── Panes ─────────────────────────────────────────────────── */
+.panes {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  gap: 1px;
+  background: var(--border);
+}
+
+.pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* ── Pane header ───────────────────────────────────────────── */
+.pane-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.pane-sigil {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.pane-left  .pane-sigil { color: var(--left-accent); }
+.pane-right .pane-sigil { color: var(--right-accent); }
+
+.pane-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+select.model-sel {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-dim);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  padding: 3px 6px;
+  outline: none;
+  cursor: pointer;
+}
+
+textarea.sys-prompt {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-dim);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 11px;
+  padding: 4px 8px;
+  resize: none;
+  outline: none;
+  min-height: 28px;
+  max-height: 28px;
+  line-height: 1.5;
+}
+textarea.sys-prompt::placeholder { color: var(--text-faint); }
+textarea.sys-prompt:focus { border-color: var(--border); color: var(--text); }
+
+.btn-clear {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  padding: 3px 8px;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.btn-clear:hover { border-color: #e05c5c; color: #e05c5c; }
+
+/* ── Messages ──────────────────────────────────────────────── */
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.messages::-webkit-scrollbar       { width: 3px; }
+.messages::-webkit-scrollbar-track { background: transparent; }
+.messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── Message bubbles ───────────────────────────────────────── */
+.msg {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: fadeUp 0.2s ease;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.msg-role {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  padding-left: 2px;
+}
+
+.msg.user { align-items: flex-end; }
+.msg.user .msg-role { color: var(--text-faint); }
+
+.msg-body {
+  max-width: 88%;
+  padding: 10px 13px;
+  border-radius: 8px;
+  line-height: 1.65;
+  font-size: 13.5px;
+}
+
+.msg.user .msg-body {
+  background: var(--tag-bg);
+  border: 1px solid var(--border);
+  align-self: flex-end;
+}
+
+.pane-left  .msg.assistant .msg-body {
+  background: var(--left-bg);
+  border: 1px solid var(--left-border);
+  align-self: flex-start;
+}
+
+.pane-right .msg.assistant .msg-body {
+  background: var(--right-bg);
+  border: 1px solid var(--right-border);
+  align-self: flex-start;
+}
+
+/* ── Cross-send button ─────────────────────────────────────── */
+.cross-send {
+  align-self: flex-start;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  margin-top: 2px;
+  transition: all 0.15s;
+}
+.pane-left  .cross-send:hover { border-color: var(--right-accent); color: var(--right-accent); }
+.pane-right .cross-send:hover { border-color: var(--left-accent);  color: var(--left-accent); }
+
+/* ── Thinking ──────────────────────────────────────────────── */
+.thinking {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+  animation: fadeUp 0.2s ease;
+}
+
+.thinking-dots { display: flex; gap: 4px; }
+
+.thinking-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.pane-left  .thinking-dot { background: var(--left-accent); }
+.pane-right .thinking-dot { background: var(--right-accent); }
+
+.thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes pulse {
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+  40%            { opacity: 1;   transform: scale(1.1); }
+}
+
+/* ── Code blocks ───────────────────────────────────────────── */
+.msg-body pre {
+  background: var(--code-bg);
+  border-radius: 5px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  margin: 8px 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+.msg-body code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11.5px;
+  background: var(--code-bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.msg-body pre code { background: none; padding: 0; }
+
+.msg-body p { margin-bottom: 8px; }
+.msg-body p:last-child { margin-bottom: 0; }
+.msg-body h1, .msg-body h2, .msg-body h3 {
+  font-family: 'Playfair Display', serif;
+  margin: 10px 0 6px;
+  line-height: 1.3;
+}
+.msg-body h1 { font-size: 17px; }
+.msg-body h2 { font-size: 15px; }
+.msg-body h3 { font-size: 14px; font-style: italic; }
+.msg-body ul, .msg-body ol { padding-left: 18px; margin: 6px 0; }
+.msg-body li { margin: 3px 0; }
+.msg-body strong { font-weight: 600; }
+.msg-body em { font-style: italic; }
+.msg-body hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+
+/* ── Error ─────────────────────────────────────────────────── */
+.error-bubble {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: #e05c5c;
+  background: rgba(224,92,92,0.07);
+  border: 1px solid rgba(224,92,92,0.2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  animation: fadeUp 0.2s ease;
+}
+
+/* ── Input area ────────────────────────────────────────────── */
+.input-area {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 12px 16px;
+  flex-shrink: 0;
+}
+
+.route-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.route-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.route-btns { display: flex; gap: 4px; }
+
+.route-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  padding: 4px 12px;
+  transition: all 0.15s;
+}
+.route-btn:hover { color: var(--text); }
+.route-btn.active-left  { background: var(--left-bg);  border-color: var(--left-border);  color: var(--left-accent); }
+.route-btn.active-both  { background: var(--tag-bg);   border-color: var(--text-dim);     color: var(--text); }
+.route-btn.active-right { background: var(--right-bg); border-color: var(--right-border); color: var(--right-accent); }
+
+.status {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--text-faint);
+  margin-left: auto;
+}
+
+.compose-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+textarea#prompt {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 10px 14px;
+  resize: none;
+  outline: none;
+  min-height: 52px;
+  max-height: 180px;
+  transition: border-color 0.15s;
+}
+textarea#prompt:focus { border-color: rgba(255,255,255,0.15); }
+textarea#prompt::placeholder { color: var(--text-faint); }
+
+.send-btn {
+  background: var(--send-bg);
+  border: none;
+  border-radius: 8px;
+  color: var(--send-fg);
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  padding: 13px 20px;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+  align-self: flex-end;
+}
+.send-btn:hover    { opacity: 0.85; }
+.send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wordmark">Duel <em>two minds, one problem</em></div>
+  <div class="header-spacer"></div>
+  <div class="toolbar">
+    <div class="theme-btns">
+      <button class="theme-btn"        data-t="parchment" onclick="setTheme('parchment')" title="Parchment"></button>
+      <button class="theme-btn active" data-t="folio"     onclick="setTheme('folio')"     title="Folio"></button>
+      <button class="theme-btn"        data-t="obsidian"  onclick="setTheme('obsidian')"  title="Obsidian"></button>
+      <button class="theme-btn"        data-t="modern"    onclick="setTheme('modern')"    title="Modern"></button>
+    </div>
+    <button class="icon-btn" onclick="exportMd()">Export MD</button>
+  </div>
+  <span class="api-label">api key</span>
+  <input type="password" id="apiKey" placeholder="sk-ant-…" autocomplete="off">
+</header>
+
+<div class="panes">
+
+  <!-- LEFT / α -->
+  <div class="pane pane-left" id="pane-left">
+    <div class="pane-head">
+      <span class="pane-sigil">α</span>
+      <span class="pane-label">Alpha</span>
+      <select class="model-sel" id="model-left">
+        <option value="claude-opus-4-6">Opus 4.6</option>
+        <option value="claude-sonnet-4-6" selected>Sonnet 4.6</option>
+        <option value="claude-haiku-4-5-20251001">Haiku 4.5</option>
+      </select>
+      <textarea class="sys-prompt" id="sys-left" placeholder="System prompt…"></textarea>
+      <button class="btn-clear" onclick="clearPane('left')">Clear</button>
+    </div>
+    <div class="messages" id="msgs-left"></div>
+  </div>
+
+  <!-- RIGHT / β -->
+  <div class="pane pane-right" id="pane-right">
+    <div class="pane-head">
+      <span class="pane-sigil">β</span>
+      <span class="pane-label">Beta</span>
+      <select class="model-sel" id="model-right">
+        <option value="claude-opus-4-6">Opus 4.6</option>
+        <option value="claude-sonnet-4-6" selected>Sonnet 4.6</option>
+        <option value="claude-haiku-4-5-20251001">Haiku 4.5</option>
+      </select>
+      <textarea class="sys-prompt" id="sys-right" placeholder="System prompt…"></textarea>
+      <button class="btn-clear" onclick="clearPane('right')">Clear</button>
+    </div>
+    <div class="messages" id="msgs-right"></div>
+  </div>
+
+</div>
+
+<div class="input-area">
+  <div class="route-row">
+    <span class="route-label">Send to</span>
+    <div class="route-btns">
+      <button class="route-btn" id="btn-left"  onclick="setRoute('left')">◀ Alpha</button>
+      <button class="route-btn active-both" id="btn-both" onclick="setRoute('both')">⬤ Both</button>
+      <button class="route-btn" id="btn-right" onclick="setRoute('right')">Beta ▶</button>
+    </div>
+    <span class="status" id="status">Ready</span>
+  </div>
+  <div class="compose-row">
+    <textarea id="prompt" placeholder="State the problem, sketch the architecture, start the argument…" rows="2"></textarea>
+    <button class="send-btn" id="sendBtn" onclick="send()">Send</button>
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────
+const histories = { left: [], right: [] };
+let route = 'both';
+let busy  = false;
+
+// ── Theme ─────────────────────────────────────────────────────
+function setTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  document.querySelectorAll('.theme-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.t === t);
+  });
+  localStorage.setItem('duel_theme', t);
+}
+
+// ── Route ─────────────────────────────────────────────────────
+function setRoute(r) {
+  route = r;
+  document.getElementById('btn-left').className  = 'route-btn' + (r === 'left'  ? ' active-left'  : '');
+  document.getElementById('btn-both').className  = 'route-btn' + (r === 'both'  ? ' active-both'  : '');
+  document.getElementById('btn-right').className = 'route-btn' + (r === 'right' ? ' active-right' : '');
+}
+
+// ── Clear ─────────────────────────────────────────────────────
+function clearPane(side) {
+  histories[side] = [];
+  document.getElementById('msgs-' + side).innerHTML = '';
+}
+
+// ── Markdown renderer ─────────────────────────────────────────
+function renderMd(text) {
+  const blocks = [];
+  text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+    const i = blocks.length;
+    blocks.push(`<pre><code>${escHtml(code.trim())}</code></pre>`);
+    return `\x00BLOCK${i}\x00`;
+  });
+
+  text = text
+    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, (_, c) => `<code>${escHtml(c)}</code>`)
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    .replace(/^---+$/gm, '<hr>')
+    .replace(/^\s*[-*]\s+(.+)$/gm, '<li>$1</li>');
+
+  text = text.replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`);
+
+  text = text.split(/\n\n+/).map(p => {
+    p = p.trim();
+    if (!p || p.startsWith('<h') || p.startsWith('<ul') || p.startsWith('<hr') || p.startsWith('\x00')) return p;
+    return `<p>${p.replace(/\n/g, '<br>')}</p>`;
+  }).join('\n');
+
+  blocks.forEach((b, i) => { text = text.replace(`\x00BLOCK${i}\x00`, b); });
+  return text;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Append message ────────────────────────────────────────────
+function appendMsg(side, role, content) {
+  const container = document.getElementById('msgs-' + side);
+
+  const wrapper = document.createElement('div');
+  wrapper.className = `msg ${role}`;
+
+  const roleEl = document.createElement('div');
+  roleEl.className = 'msg-role';
+  roleEl.textContent = role === 'user' ? 'you' : side === 'left' ? 'α' : 'β';
+
+  const body = document.createElement('div');
+  body.className = 'msg-body';
+  body.innerHTML = renderMd(content);
+
+  wrapper.appendChild(roleEl);
+  wrapper.appendChild(body);
+
+  if (role === 'assistant') {
+    const xBtn = document.createElement('button');
+    xBtn.className = 'cross-send';
+    const target = side === 'left' ? 'right' : 'left';
+    const sigil  = side === 'left' ? 'β' : 'α';
+    xBtn.textContent = `→ send to ${sigil}`;
+    xBtn.onclick = () => crossSend(content, target);
+    wrapper.appendChild(xBtn);
+  }
+
+  container.appendChild(wrapper);
+  container.scrollTop = container.scrollHeight;
+}
+
+// ── Thinking indicator ────────────────────────────────────────
+function showThinking(side) {
+  const container = document.getElementById('msgs-' + side);
+  const el = document.createElement('div');
+  el.className = 'thinking';
+  el.id = 'thinking-' + side;
+  el.innerHTML = `<div class="thinking-dots">
+    <div class="thinking-dot"></div>
+    <div class="thinking-dot"></div>
+    <div class="thinking-dot"></div>
+  </div>`;
+  container.appendChild(el);
+  container.scrollTop = container.scrollHeight;
+}
+
+function hideThinking(side) {
+  const el = document.getElementById('thinking-' + side);
+  if (el) el.remove();
+}
+
+// ── Error ─────────────────────────────────────────────────────
+function showError(side, msg) {
+  const container = document.getElementById('msgs-' + side);
+  const el = document.createElement('div');
+  el.className = 'error-bubble';
+  el.textContent = '⚠ ' + msg;
+  container.appendChild(el);
+  container.scrollTop = container.scrollHeight;
+}
+
+function setStatus(msg) {
+  document.getElementById('status').textContent = msg;
+}
+
+// ── Claude API call ───────────────────────────────────────────
+async function callClaude(side, userMsg) {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const model  = document.getElementById('model-' + side).value;
+  const sys    = document.getElementById('sys-' + side).value.trim();
+
+  histories[side].push({ role: 'user', content: userMsg });
+
+  const body = { model, max_tokens: 2048, messages: histories[side] };
+  if (sys) body.system = sys;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `HTTP ${res.status}`);
+  }
+
+  const data = await res.json();
+  const text = data.content?.[0]?.text || '';
+  histories[side].push({ role: 'assistant', content: text });
+  return text;
+}
+
+// ── Send ──────────────────────────────────────────────────────
+async function send() {
+  if (busy) return;
+
+  const promptEl = document.getElementById('prompt');
+  const prompt = promptEl.value.trim();
+  if (!prompt) return;
+
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) { setStatus('⚠ Enter API key'); return; }
+
+  const sides = route === 'both' ? ['left','right'] : [route];
+
+  busy = true;
+  document.getElementById('sendBtn').disabled = true;
+  promptEl.value = '';
+  promptEl.style.height = 'auto';
+  setStatus('Thinking…');
+
+  sides.forEach(s => appendMsg(s, 'user', prompt));
+  sides.forEach(s => showThinking(s));
+
+  try {
+    await Promise.all(sides.map(s =>
+      callClaude(s, prompt)
+        .then(text => { hideThinking(s); appendMsg(s, 'assistant', text); })
+        .catch(err  => { hideThinking(s); showError(s, err.message); })
+    ));
+    setStatus('Ready');
+  } catch(e) {
+    setStatus('Error');
+  }
+
+  busy = false;
+  document.getElementById('sendBtn').disabled = false;
+  promptEl.focus();
+}
+
+// ── Cross-send ────────────────────────────────────────────────
+async function crossSend(content, targetSide) {
+  if (busy) return;
+
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) { setStatus('⚠ Enter API key'); return; }
+
+  busy = true;
+  document.getElementById('sendBtn').disabled = true;
+  setStatus('Cross-sending…');
+
+  appendMsg(targetSide, 'user', content);
+  showThinking(targetSide);
+
+  try {
+    const text = await callClaude(targetSide, content);
+    hideThinking(targetSide);
+    appendMsg(targetSide, 'assistant', text);
+    setStatus('Ready');
+  } catch(e) {
+    hideThinking(targetSide);
+    showError(targetSide, e.message);
+    setStatus('Error');
+  }
+
+  busy = false;
+  document.getElementById('sendBtn').disabled = false;
+}
+
+// ── Export Markdown ───────────────────────────────────────────
+function exportMd() {
+  const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+  let md = `# Duel Session\n_Exported: ${now}_\n\n`;
+
+  const maxLen = Math.max(histories.left.length, histories.right.length);
+  if (maxLen === 0) { alert('Nothing to export.'); return; }
+
+  md += `## α Alpha\n\n`;
+  histories.left.forEach(m => {
+    md += `**${m.role === 'user' ? 'You' : 'α'}:** ${m.content}\n\n`;
+  });
+
+  md += `---\n\n## β Beta\n\n`;
+  histories.right.forEach(m => {
+    md += `**${m.role === 'user' ? 'You' : 'β'}:** ${m.content}\n\n`;
+  });
+
+  const blob = new Blob([md], { type: 'text/markdown' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `duel-${now.replace(/[: ]/g,'-')}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Auto-resize textarea ──────────────────────────────────────
+const promptEl = document.getElementById('prompt');
+promptEl.addEventListener('input', () => {
+  promptEl.style.height = 'auto';
+  promptEl.style.height = Math.min(promptEl.scrollHeight, 180) + 'px';
+});
+
+// ── Persist settings ──────────────────────────────────────────
+const keyInput = document.getElementById('apiKey');
+const saved = sessionStorage.getItem('duel_key');
+if (saved) keyInput.value = saved;
+keyInput.addEventListener('input', () => sessionStorage.setItem('duel_key', keyInput.value));
+
+const savedTheme = localStorage.getItem('duel_theme');
+if (savedTheme) setTheme(savedTheme);
+</script>
+</body>
+</html>
