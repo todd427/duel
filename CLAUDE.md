@@ -4,13 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Duel is a **single-file browser tool** (`index.html`) for running two independent Claude API sessions side by side. There is no build step, no npm, no framework, no backend. All HTML, CSS, and JS live in `index.html`.
+Duel runs two independent Claude API sessions side by side. The frontend is a **single file** (`index.html`) — no build, no npm, no framework. The **hosted deploy** (Cloudflare Pages, auto-deployed from `todd427/duel`) adds one server-side **Pages Function** (`functions/api/chat.js`) that injects secrets so the browser never holds any. There is still no server *you* run.
+
+## Two modes (important)
+
+`streamClaude` picks the transport by whether the API-key field has a value:
+- **Hosted / proxy mode (no key):** POSTs `{model, system, messages, max_tokens, web, mnemos, rialu}` to **`/api/chat`** (the Pages Function), which adds the Anthropic key + web tools + MCP servers/tokens and streams the SSE back. The browser holds nothing. This is the normal path on `duel.foxxelabs.ie` (gated by Cloudflare Access).
+- **BYOK / local mode (key present):** calls `api.anthropic.com` directly with `anthropic-dangerous-direct-browser-access`, building tools/`mcp_servers` client-side (MCP tokens from the Context panel). For opening `index.html` standalone.
 
 ## Running & testing
 
-- **Run:** open `index.html` directly in a browser (`open index.html` / `xdg-open index.html`). No server needed.
-- **No build, no lint, no test suite.** Changes are verified by loading the file in a browser.
-- The app is BYOK: it needs an Anthropic API key entered in the UI (stored in `sessionStorage` as `duel_key`). API calls go directly from the browser to `api.anthropic.com` using the `anthropic-dangerous-direct-browser-access: true` header.
+- **Hosted:** push to `todd427/duel` → Cloudflare Pages auto-deploys. Secrets live in the Pages project env (`ANTHROPIC_API_KEY`, `MNEMOS_MCP_TOKEN`, `RIALU_MCP_TOKEN`).
+- **Local/BYOK:** open `index.html` and paste an API key (proxy isn't there, so it uses the direct path). `node --check` on the extracted `<script>` and on `functions/api/chat.js` catches syntax errors. No test suite; verify in a browser.
+- The SSE parser is identical for both modes (the proxy passes Anthropic's stream straight through).
 
 ## Architecture
 
@@ -29,7 +35,8 @@ Everything is one file. The script section (from ~line 674) is the whole app.
 
 ## Conventions & constraints
 
-- **Keep it single-file and dependency-free.** Do not introduce a build step, npm packages, or external script/CDN imports unless explicitly asked.
+- **Keep the frontend single-file and dependency-free.** All HTML/CSS/JS stays in `index.html`; no build step, npm, or CDN imports unless explicitly asked. The only backend is `functions/api/chat.js` (a Cloudflare Pages Function) — keep it dependency-free too (Workers runtime only).
+- **⚠ Tool/MCP definitions live in TWO places — keep them in sync.** `webTools()` / `mcpConfig()` (in `index.html`, BYOK path) and the `MCP` map + tool-building in `functions/api/chat.js` (proxy path) must match. If you change a model list, a web-tool version, or an MCP read-only allow-list, edit **both** or hosted and local will diverge.
 - `left`/`right` are the internal identifiers; α/β/Alpha/Beta are display labels only.
 - **Accessibility: all four themes must hold WCAG AAA text contrast (≥7:1).** Each theme defines `--text` / `--text-dim` / `--text-faint` (all ≥7:1; dim ~8:1) plus `--left-ink` / `--right-ink` (text-legible accent variants — accents themselves are kept vivid for borders/dots/tints and are **not** contrast-safe as text), and `--error` / `--warn`. Use `--*-ink`/`--error`/`--warn` for any *text*; reserve `--*-accent` for borders/backgrounds. Don't apply `opacity` to already-dimmed text. If you touch theme colors, re-verify with the contrast math (composite alpha over `bg`/`surface`/`surface2`, worst case is `surface2`).
 - Missing API key is surfaced loudly via `flagMissingKey()` (focus + red shake on `#apiKey`, `.needs-key` on the label, status text); the `#apiKey` input listener clears `.needs-key` on type.
