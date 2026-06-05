@@ -13,6 +13,7 @@ Duel is a single-file browser tool for running two Claude API sessions side by s
 - Two independent panes — **α Alpha** and **β Beta** — each with its own model, system prompt, and conversation history
 - **Streaming** — responses render token-by-token live in each pane (both panes stream in parallel)
 - **Web access** — optional `🌐 Web` toggle gives both panes Anthropic-hosted web search + fetch (server-side); tool activity is shown inline
+- **Context (read-only)** — optional `🧠 Context` panel connects Mnemos (memory corpus) + Rialú (project state) over MCP, so both panes can ground answers in *your* world; read-only, BYO OAuth token per server
 - **Route selector** — send to Alpha only, Both (parallel), or Beta only
 - **Cross-send** — send any response from one pane to the other as a new user message
 - **Presets** — one-click system-prompt pairs (Sceptic ⚔ Builder, Red ⚔ Blue team, Line ⚔ Dev editor)
@@ -58,6 +59,7 @@ open duel/index.html
 - No backend, no analytics, no logging
 - Responses stream over SSE (`stream: true`), parsed from the `fetch` body reader — no SDK
 - Web access uses Anthropic's server-side `web_search` + `web_fetch` tools (run on Anthropic's infra, not the browser); no extra backend, no API key beyond your own
+- Context uses Anthropic's MCP connector (server-side) against Mnemos/Rialú with read-only tool allow-lists; OAuth bearer tokens are entered per server and kept in `sessionStorage`
 - File attachments: images → base64 vision blocks, PDFs → document blocks, text/code → fenced code blocks prepended to message
 
 ## Models supported
