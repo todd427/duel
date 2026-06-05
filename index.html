@@ -255,6 +255,39 @@ select.preset-sel:hover { border-color: var(--text-dim); color: var(--text); }
 }
 .maxtok input:focus { border-color: var(--left-accent); color: var(--text); }
 
+.web-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 10px;
+  user-select: none;
+}
+.web-toggle input { accent-color: var(--left-accent); cursor: pointer; margin: 0; }
+.web-toggle:has(input:checked) { color: var(--text); border-color: var(--left-accent); }
+
+.tool-trace { display: flex; flex-direction: column; gap: 4px; }
+.tool-trace:not(:empty) { margin-bottom: 6px; }
+.tool-chip {
+  align-self: flex-start;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 2px 8px;
+  max-width: 88%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .trunc-note {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 10px;
@@ -672,6 +705,10 @@ textarea#prompt::placeholder { color: var(--text-faint); }
       <button class="theme-btn"        data-t="obsidian"  onclick="setTheme('obsidian')"  title="Obsidian"></button>
       <button class="theme-btn"        data-t="modern"    onclick="setTheme('modern')"    title="Modern"></button>
     </div>
+    <label class="web-toggle" title="Let both panes search and fetch the web (Anthropic-hosted, server-side)">
+      <input type="checkbox" id="webToggle">
+      <span>🌐 Web</span>
+    </label>
     <select class="preset-sel" id="presetSel" onchange="applyPreset(this.value)" title="Load a system-prompt preset into both panes">
       <option value="">Presets…</option>
       <option value="archreview">Sceptic ⚔ Builder</option>
@@ -992,11 +1029,22 @@ function startAssistantMsg(side) {
   roleEl.className = 'msg-role';
   roleEl.textContent = side === 'left' ? 'α' : 'β';
   wrapper.appendChild(roleEl);
+  const tools = document.createElement('div');   // web-tool activity chips
+  tools.className = 'tool-trace';
+  wrapper.appendChild(tools);
   const body = document.createElement('div');
   body.className = 'msg-body';
   wrapper.appendChild(body);
   container.appendChild(wrapper);
-  return { container, wrapper, body };
+  return { container, wrapper, tools, body };
+}
+
+function addToolChip(h, label) {
+  const chip = document.createElement('div');
+  chip.className = 'tool-chip';
+  chip.textContent = label;
+  h.tools.appendChild(chip);
+  h.container.scrollTop = h.container.scrollHeight;
 }
 
 function finalizeAssistant(side, h, fullText, stopReason) {
@@ -1017,81 +1065,125 @@ function finalizeAssistant(side, h, fullText, stopReason) {
   h.container.scrollTop = h.container.scrollHeight;
 }
 
-// ── Claude API call (streaming SSE) ───────────────────────────
-async function streamClaude(side, userText, attachments, onText) {
+// ── Web access (server-side tools) ────────────────────────────
+// Anthropic-hosted web_search + web_fetch run on Anthropic's infra (no backend
+// here). web_fetch can only read URLs already in context, so pairing it with
+// web_search lets "look at example.com/x" resolve via search → fetch.
+function webTools() {
+  if (!document.getElementById('webToggle')?.checked) return null;
+  return [
+    { type: 'web_search_20250305', name: 'web_search', max_uses: 5 },
+    { type: 'web_fetch_20250910',  name: 'web_fetch',  max_uses: 5,
+      citations: { enabled: true }, max_content_tokens: 50000 },
+  ];
+}
+
+// ── Claude API call (streaming SSE, with server tools) ────────
+// hooks: { onText(fullText), onTool(label) }
+async function streamClaude(side, userText, attachments, hooks) {
   const apiKey = document.getElementById('apiKey').value.trim();
   const model  = document.getElementById('model-' + side).value;
   const sys    = document.getElementById('sys-' + side).value.trim();
+  const tools  = webTools();
 
   const content = buildContent(userText, attachments);
   histories[side].push({ role: 'user', content });
 
-  const body = { model, max_tokens: maxTokens(), messages: histories[side], stream: true };
-  if (sys) body.system = sys;
+  let answer = '', stopReason = null, guard = 0;
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify(body)
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `HTTP ${res.status}`);
-  }
-
-  const reader  = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '', text = '', stopReason = null;
-
+  // Loop only to resume across pause_turn (server-tool iteration cap)
   while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+    const body = { model, max_tokens: maxTokens(), messages: histories[side], stream: true };
+    if (sys)   body.system = sys;
+    if (tools) body.tools  = tools;
 
-    // SSE frames are separated by a blank line
-    let idx;
-    while ((idx = buffer.indexOf('\n\n')) !== -1) {
-      const frame = buffer.slice(0, idx);
-      buffer = buffer.slice(idx + 2);
-      for (const line of frame.split('\n')) {
-        const t = line.trimStart();
-        if (!t.startsWith('data:')) continue;
-        const payload = t.slice(5).trim();
-        if (!payload) continue;
-        let evt;
-        try { evt = JSON.parse(payload); } catch { continue; }
-        if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
-          text += evt.delta.text;
-          onText(text);
-        } else if (evt.type === 'message_delta' && evt.delta?.stop_reason) {
-          stopReason = evt.delta.stop_reason;
-        } else if (evt.type === 'error') {
-          throw new Error(evt.error?.message || 'stream error');
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `HTTP ${res.status}`);
+    }
+
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    const blocks = [];        // reconstructed assistant content blocks
+    const partial = {};       // index -> partial tool-input JSON
+    stopReason = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      let idx;                // SSE frames separated by a blank line
+      while ((idx = buffer.indexOf('\n\n')) !== -1) {
+        const frame = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 2);
+        for (const line of frame.split('\n')) {
+          const t = line.trimStart();
+          if (!t.startsWith('data:')) continue;
+          const payload = t.slice(5).trim();
+          if (!payload) continue;
+          let evt;
+          try { evt = JSON.parse(payload); } catch { continue; }
+
+          if (evt.type === 'content_block_start') {
+            blocks[evt.index] = structuredClone(evt.content_block);
+          } else if (evt.type === 'content_block_delta') {
+            const b = blocks[evt.index];
+            if (evt.delta?.type === 'text_delta') {
+              if (b) b.text = (b.text || '') + evt.delta.text;
+              answer += evt.delta.text;
+              hooks.onText(answer);
+            } else if (evt.delta?.type === 'input_json_delta') {
+              partial[evt.index] = (partial[evt.index] || '') + evt.delta.partial_json;
+            }
+          } else if (evt.type === 'content_block_stop') {
+            const b = blocks[evt.index];
+            if (b && b.type === 'server_tool_use') {
+              try { b.input = JSON.parse(partial[evt.index] || '{}'); } catch {}
+              if (b.name === 'web_search') hooks.onTool(`🔍 searched: ${b.input?.query ?? ''}`);
+              else if (b.name === 'web_fetch') hooks.onTool(`🌐 fetched: ${b.input?.url ?? ''}`);
+              else hooks.onTool(`🛠 ${b.name}`);
+            }
+          } else if (evt.type === 'message_delta' && evt.delta?.stop_reason) {
+            stopReason = evt.delta.stop_reason;
+          } else if (evt.type === 'error') {
+            throw new Error(evt.error?.message || 'stream error');
+          }
         }
       }
     }
-  }
 
-  histories[side].push({ role: 'assistant', content: text });
-  return { text, stopReason };
+    // Preserve the full turn (text + tool blocks) so server-tool context
+    // survives, and so a pause_turn can be resumed by re-sending.
+    histories[side].push({ role: 'assistant', content: blocks.filter(Boolean) });
+
+    if (stopReason === 'pause_turn' && guard++ < 5) continue;
+    return { text: answer, stopReason };
+  }
 }
 
 // ── Run one streamed turn into a pane ─────────────────────────
 async function runStream(side, userText, attachments) {
   let h = null;
+  const ensure = () => { if (!h) { hideThinking(side); h = startAssistantMsg(side); } return h; };
   try {
-    const { text, stopReason } = await streamClaude(side, userText, attachments, acc => {
-      if (!h) { hideThinking(side); h = startAssistantMsg(side); }
-      h.body.innerHTML = renderMd(acc);
-      h.container.scrollTop = h.container.scrollHeight;
+    const { text, stopReason } = await streamClaude(side, userText, attachments, {
+      onText: acc => { ensure(); h.body.innerHTML = renderMd(acc); h.container.scrollTop = h.container.scrollHeight; },
+      onTool: label => { ensure(); addToolChip(h, label); },
     });
-    if (!h) { hideThinking(side); h = startAssistantMsg(side); }  // empty reply
+    ensure();
     finalizeAssistant(side, h, text, stopReason);
   } catch (err) {
     hideThinking(side);
@@ -1217,6 +1309,11 @@ keyInput.addEventListener('input', () => {
   keyInput.classList.remove('needs-key');
   document.querySelector('.api-label')?.classList.remove('needs-key');
 });
+
+// ── Web access toggle (persisted; default on) ─────────────────
+const webToggle = document.getElementById('webToggle');
+webToggle.checked = (localStorage.getItem('duel_web') ?? '1') === '1';
+webToggle.addEventListener('change', () => localStorage.setItem('duel_web', webToggle.checked ? '1' : '0'));
 
 // ── Presets ───────────────────────────────────────────────────
 const PRESETS = {
