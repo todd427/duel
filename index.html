@@ -237,45 +237,6 @@ select.preset-sel:hover { border-color: var(--text-dim); color: var(--text); }
 .web-toggle input { accent-color: var(--left-accent); cursor: pointer; margin: 0; }
 .web-toggle:has(input:checked) { color: var(--text); border-color: var(--left-accent); }
 
-.ctx-wrap { position: relative; }
-.ctx-panel {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 50;
-  width: 300px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: var(--shadow);
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.ctx-title {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-}
-.ctx-row { display: flex; align-items: center; gap: 8px; }
-.ctx-row input[type="checkbox"] { accent-color: var(--left-accent); cursor: pointer; margin: 0; }
-.ctx-name {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 12px;
-  color: var(--text);
-  width: 56px;
-  flex-shrink: 0;
-}
-.ctx-note {
-  font-family: 'IBM Plex Sans', sans-serif;
-  font-size: 11px;
-  line-height: 1.5;
-  color: var(--text-dim);
-}
-
 .tool-trace { display: flex; flex-direction: column; gap: 4px; }
 .tool-trace:not(:empty) { margin-bottom: 6px; }
 .tool-chip {
@@ -716,21 +677,6 @@ textarea#prompt::placeholder { color: var(--text-faint); }
       <input type="checkbox" id="webToggle">
       <span>🌐 Web</span>
     </label>
-    <div class="ctx-wrap">
-      <button class="icon-btn" id="ctxBtn" onclick="toggleCtx()" title="Read-only context from Mnemos + Rialú (MCP)">🧠 Context</button>
-      <div class="ctx-panel" id="ctxPanel" hidden>
-        <div class="ctx-title">Context — read-only MCP</div>
-        <label class="ctx-row">
-          <input type="checkbox" id="mcp-mnemos-on">
-          <span class="ctx-name">Mnemos</span>
-        </label>
-        <label class="ctx-row">
-          <input type="checkbox" id="mcp-rialu-on">
-          <span class="ctx-name">Rialú</span>
-        </label>
-        <div class="ctx-note">Toggle a server on — read-only (Mnemos search · Rialú project reads).</div>
-      </div>
-    </div>
     <select class="preset-sel" id="presetSel" onchange="applyPreset(this.value)" title="Load a system-prompt preset into both panes">
       <option value="">Presets…</option>
       <option value="archreview">Sceptic ⚔ Builder</option>
@@ -1097,8 +1043,8 @@ async function streamClaude(side, userText, attachments, hooks) {
         model, system: sys || undefined, messages: histories[side],
         max_tokens: maxTokens(),
         web:    !!document.getElementById('webToggle')?.checked,
-        mnemos: !!document.getElementById('mcp-mnemos-on')?.checked,
-        rialu:  !!document.getElementById('mcp-rialu-on')?.checked,
+        mnemos: true,   // context always on (server-side; tools fire only when relevant)
+        rialu:  true,
       })
     });
 
@@ -1293,21 +1239,6 @@ inputArea.addEventListener('drop', e => {
 const webToggle = document.getElementById('webToggle');
 webToggle.checked = (localStorage.getItem('duel_web') ?? '1') === '1';
 webToggle.addEventListener('change', () => localStorage.setItem('duel_web', webToggle.checked ? '1' : '0'));
-
-// ── Context (MCP) panel: persistence + open/close ─────────────
-function toggleCtx() {
-  const p = document.getElementById('ctxPanel');
-  p.hidden = !p.hidden;
-}
-document.addEventListener('click', e => {
-  const wrap = document.querySelector('.ctx-wrap');
-  if (wrap && !wrap.contains(e.target)) document.getElementById('ctxPanel').hidden = true;
-});
-['mnemos', 'rialu'].forEach(id => {
-  const on = document.getElementById('mcp-' + id + '-on');
-  on.checked = localStorage.getItem('duel_mcp_' + id + '_on') === '1';
-  on.addEventListener('change', () => localStorage.setItem('duel_mcp_' + id + '_on', on.checked ? '1' : '0'));
-});
 
 // ── Presets ───────────────────────────────────────────────────
 const PRESETS = {

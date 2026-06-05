@@ -13,7 +13,7 @@ Duel is a single-file browser tool for running two Claude API sessions side by s
 - Two independent panes — **α Alpha** and **β Beta** — each with its own model, system prompt, and conversation history
 - **Streaming** — responses render token-by-token live in each pane (both panes stream in parallel)
 - **Web access** — optional `🌐 Web` toggle gives both panes Anthropic-hosted web search + fetch (server-side); tool activity is shown inline
-- **Context (read-only)** — optional `🧠 Context` panel connects Mnemos (memory corpus) + Rialú (project state) over MCP, so both panes can ground answers in *your* world; read-only, tokens injected server-side
+- **Context (read-only)** — both panes can ground answers in *your* world via Mnemos (memory corpus) + Rialú (project state) over MCP; always on, read-only, tokens injected server-side
 - **Route selector** — send to Alpha only, Both (parallel), or Beta only
 - **Cross-send** — send any response from one pane to the other as a new user message
 - **Presets** — one-click system-prompt pairs (Sceptic ⚔ Builder, Red ⚔ Blue team, Line ⚔ Dev editor)
