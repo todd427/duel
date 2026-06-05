@@ -310,6 +310,10 @@ select.preset-sel:hover { border-color: var(--text-dim); color: var(--text); }
   line-height: 1.5;
   color: var(--text-dim);
 }
+/* Hosted (no API key) = toggles only; BYOK (key set) = show token fields */
+.ctx-panel:not(.byok) .ctx-row input[type="password"] { display: none; }
+.ctx-panel:not(.byok) .ctx-note-byok   { display: none; }
+.ctx-panel.byok       .ctx-note-hosted { display: none; }
 
 .tool-trace { display: flex; flex-direction: column; gap: 4px; }
 .tool-trace:not(:empty) { margin-bottom: 6px; }
@@ -763,7 +767,8 @@ textarea#prompt::placeholder { color: var(--text-faint); }
           <span class="ctx-name">Rialú</span>
           <input type="password" id="mcp-rialu" placeholder="OAuth token" autocomplete="off">
         </label>
-        <div class="ctx-note">Hosted: just toggle a server on — tokens live server-side. Read-only (Mnemos search + Rialú project reads). The token fields apply only in standalone/BYOK mode (when an API key is set).</div>
+        <div class="ctx-note ctx-note-hosted">Toggle a server on — tokens live server-side. Read-only (Mnemos search · Rialú project reads).</div>
+        <div class="ctx-note ctx-note-byok">Paste a bearer token per server (BYOK / local mode). Read-only (Mnemos search · Rialú project reads).</div>
       </div>
     </div>
     <select class="preset-sel" id="presetSel" onchange="applyPreset(this.value)" title="Load a system-prompt preset into both panes">
@@ -1395,7 +1400,11 @@ inputArea.addEventListener('drop', e => {
 const keyInput = document.getElementById('apiKey');
 const saved = sessionStorage.getItem('duel_key');
 if (saved) keyInput.value = saved;
-keyInput.addEventListener('input', () => sessionStorage.setItem('duel_key', keyInput.value));
+keyInput.addEventListener('input', () => {
+  sessionStorage.setItem('duel_key', keyInput.value);
+  updateCtxMode();
+});
+updateCtxMode();
 
 // ── Web access toggle (persisted; default on) ─────────────────
 const webToggle = document.getElementById('webToggle');
@@ -1406,6 +1415,11 @@ webToggle.addEventListener('change', () => localStorage.setItem('duel_web', webT
 function toggleCtx() {
   const p = document.getElementById('ctxPanel');
   p.hidden = !p.hidden;
+}
+// Show token fields only in BYOK mode (an API key is set); hosted = toggles only.
+function updateCtxMode() {
+  const byok = !!document.getElementById('apiKey').value.trim();
+  document.getElementById('ctxPanel').classList.toggle('byok', byok);
 }
 document.addEventListener('click', e => {
   const wrap = document.querySelector('.ctx-wrap');
