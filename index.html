@@ -195,6 +195,46 @@ input#apiKey::placeholder { color: var(--text-faint); }
 }
 .icon-btn:hover { border-color: var(--text-dim); color: var(--text); }
 
+select.preset-sel {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 10px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+select.preset-sel:hover { border-color: var(--text-dim); color: var(--text); }
+
+.maxtok {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.maxtok input {
+  width: 64px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-dim);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  padding: 3px 6px;
+  outline: none;
+}
+.maxtok input:focus { border-color: var(--left-accent); color: var(--text); }
+
+.trunc-note {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: #e0a05c;
+  margin-top: 6px;
+}
+
 /* ── Panes ─────────────────────────────────────────────────── */
 .panes {
   display: flex;
@@ -605,6 +645,17 @@ textarea#prompt::placeholder { color: var(--text-faint); }
       <button class="theme-btn"        data-t="obsidian"  onclick="setTheme('obsidian')"  title="Obsidian"></button>
       <button class="theme-btn"        data-t="modern"    onclick="setTheme('modern')"    title="Modern"></button>
     </div>
+    <select class="preset-sel" id="presetSel" onchange="applyPreset(this.value)" title="Load a system-prompt preset into both panes">
+      <option value="">Presets…</option>
+      <option value="archreview">Sceptic ⚔ Builder</option>
+      <option value="redblue">Red ⚔ Blue team</option>
+      <option value="writing">Line ⚔ Dev editor</option>
+      <option value="clear">Clear prompts</option>
+    </select>
+    <label class="maxtok" title="Max output tokens per reply">
+      <span>max tok</span>
+      <input type="number" id="maxTokens" min="256" max="64000" step="256" value="4096">
+    </label>
     <button class="icon-btn" onclick="exportMd()">Export MD</button>
   </div>
   <span class="api-label">api key</span>
@@ -887,8 +938,49 @@ function showError(side, msg) {
 
 function setStatus(msg) { document.getElementById('status').textContent = msg; }
 
-// ── Claude API call ───────────────────────────────────────────
-async function callClaude(side, userText, attachments) {
+// ── Max output tokens ─────────────────────────────────────────
+function maxTokens() {
+  const v = parseInt(document.getElementById('maxTokens').value, 10);
+  if (!Number.isFinite(v) || v < 256) return 4096;
+  return Math.min(v, 64000);  // 64K is valid for every model in the picker
+}
+
+// ── Live assistant bubble (streaming target) ──────────────────
+function startAssistantMsg(side) {
+  const container = document.getElementById('msgs-' + side);
+  const wrapper   = document.createElement('div');
+  wrapper.className = 'msg assistant';
+  const roleEl = document.createElement('div');
+  roleEl.className = 'msg-role';
+  roleEl.textContent = side === 'left' ? 'α' : 'β';
+  wrapper.appendChild(roleEl);
+  const body = document.createElement('div');
+  body.className = 'msg-body';
+  wrapper.appendChild(body);
+  container.appendChild(wrapper);
+  return { container, wrapper, body };
+}
+
+function finalizeAssistant(side, h, fullText, stopReason) {
+  h.body.innerHTML = renderMd(fullText);
+  if (stopReason === 'max_tokens') {
+    const note = document.createElement('div');
+    note.className = 'trunc-note';
+    note.textContent = '⚠ truncated — hit max tokens; raise “max tok” and ask it to continue';
+    h.wrapper.appendChild(note);
+  }
+  const xBtn = document.createElement('button');
+  xBtn.className = 'cross-send';
+  const target = side === 'left' ? 'right' : 'left';
+  const sigil  = side === 'left' ? 'β' : 'α';
+  xBtn.textContent = `→ send to ${sigil}`;
+  xBtn.onclick = () => crossSend(fullText, target);
+  h.wrapper.appendChild(xBtn);
+  h.container.scrollTop = h.container.scrollHeight;
+}
+
+// ── Claude API call (streaming SSE) ───────────────────────────
+async function streamClaude(side, userText, attachments, onText) {
   const apiKey = document.getElementById('apiKey').value.trim();
   const model  = document.getElementById('model-' + side).value;
   const sys    = document.getElementById('sys-' + side).value.trim();
@@ -896,7 +988,7 @@ async function callClaude(side, userText, attachments) {
   const content = buildContent(userText, attachments);
   histories[side].push({ role: 'user', content });
 
-  const body = { model, max_tokens: 2048, messages: histories[side] };
+  const body = { model, max_tokens: maxTokens(), messages: histories[side], stream: true };
   if (sys) body.system = sys;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -915,10 +1007,59 @@ async function callClaude(side, userText, attachments) {
     throw new Error(err?.error?.message || `HTTP ${res.status}`);
   }
 
-  const data = await res.json();
-  const text = data.content?.[0]?.text || '';
+  const reader  = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '', text = '', stopReason = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    // SSE frames are separated by a blank line
+    let idx;
+    while ((idx = buffer.indexOf('\n\n')) !== -1) {
+      const frame = buffer.slice(0, idx);
+      buffer = buffer.slice(idx + 2);
+      for (const line of frame.split('\n')) {
+        const t = line.trimStart();
+        if (!t.startsWith('data:')) continue;
+        const payload = t.slice(5).trim();
+        if (!payload) continue;
+        let evt;
+        try { evt = JSON.parse(payload); } catch { continue; }
+        if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
+          text += evt.delta.text;
+          onText(text);
+        } else if (evt.type === 'message_delta' && evt.delta?.stop_reason) {
+          stopReason = evt.delta.stop_reason;
+        } else if (evt.type === 'error') {
+          throw new Error(evt.error?.message || 'stream error');
+        }
+      }
+    }
+  }
+
   histories[side].push({ role: 'assistant', content: text });
-  return text;
+  return { text, stopReason };
+}
+
+// ── Run one streamed turn into a pane ─────────────────────────
+async function runStream(side, userText, attachments) {
+  let h = null;
+  try {
+    const { text, stopReason } = await streamClaude(side, userText, attachments, acc => {
+      if (!h) { hideThinking(side); h = startAssistantMsg(side); }
+      h.body.innerHTML = renderMd(acc);
+      h.container.scrollTop = h.container.scrollHeight;
+    });
+    if (!h) { hideThinking(side); h = startAssistantMsg(side); }  // empty reply
+    finalizeAssistant(side, h, text, stopReason);
+  } catch (err) {
+    hideThinking(side);
+    if (h) h.wrapper.remove();
+    showError(side, err.message);
+  }
 }
 
 // ── Send ──────────────────────────────────────────────────────
@@ -950,16 +1091,8 @@ async function send() {
   sides.forEach(s => appendMsg(s, 'user', prompt, attachments));
   sides.forEach(s => showThinking(s));
 
-  try {
-    await Promise.all(sides.map(s =>
-      callClaude(s, prompt, attachments)
-        .then(text => { hideThinking(s); appendMsg(s, 'assistant', text); })
-        .catch(err  => { hideThinking(s); showError(s, err.message); })
-    ));
-    setStatus('Ready');
-  } catch(e) {
-    setStatus('Error');
-  }
+  await Promise.all(sides.map(s => runStream(s, prompt, attachments)));
+  setStatus('Ready');
 
   busy = false;
   document.getElementById('sendBtn').disabled = false;
@@ -980,16 +1113,8 @@ async function crossSend(content, targetSide) {
   appendMsg(targetSide, 'user', content);
   showThinking(targetSide);
 
-  try {
-    const text = await callClaude(targetSide, content);
-    hideThinking(targetSide);
-    appendMsg(targetSide, 'assistant', text);
-    setStatus('Ready');
-  } catch(e) {
-    hideThinking(targetSide);
-    showError(targetSide, e.message);
-    setStatus('Error');
-  }
+  await runStream(targetSide, content);
+  setStatus('Ready');
 
   busy = false;
   document.getElementById('sendBtn').disabled = false;
@@ -1050,6 +1175,53 @@ const keyInput = document.getElementById('apiKey');
 const saved = sessionStorage.getItem('duel_key');
 if (saved) keyInput.value = saved;
 keyInput.addEventListener('input', () => sessionStorage.setItem('duel_key', keyInput.value));
+
+// ── Presets ───────────────────────────────────────────────────
+const PRESETS = {
+  archreview: {
+    left:  'You are a sceptical software architect. Challenge every assumption. Find the failure mode, the edge case, the thing that breaks at scale. Be concise and specific.',
+    right: 'You are a pragmatic builder. Find the simplest design that ships and works. Be concise and specific.'
+  },
+  redblue: {
+    left:  'You are a red-team security reviewer. Find how this can be attacked, abused, or broken. Think like an adversary.',
+    right: 'You are a blue-team defender. Propose mitigations, hardening, and detection for the risks raised. Be practical.'
+  },
+  writing: {
+    left:  'You are a demanding line editor. Cut fluff, flag weak arguments, tighten prose. Quote the lines you would change.',
+    right: 'You are a generous developmental editor. Say what works, how to amplify it, and sketch the next draft.'
+  }
+};
+function applyPreset(name) {
+  if (name === 'clear') {
+    document.getElementById('sys-left').value  = '';
+    document.getElementById('sys-right').value = '';
+  } else if (PRESETS[name]) {
+    document.getElementById('sys-left').value  = PRESETS[name].left;
+    document.getElementById('sys-right').value = PRESETS[name].right;
+  }
+  document.getElementById('presetSel').value = '';
+  saveSettings();
+}
+
+// ── Persist panel settings (system prompts, models, max tokens) ─
+const PERSIST_IDS = ['sys-left','sys-right','model-left','model-right','maxTokens'];
+function saveSettings() {
+  const data = {};
+  PERSIST_IDS.forEach(id => { data[id] = document.getElementById(id).value; });
+  localStorage.setItem('duel_settings', JSON.stringify(data));
+}
+(function restoreSettings() {
+  let data;
+  try { data = JSON.parse(localStorage.getItem('duel_settings') || '{}'); } catch { data = {}; }
+  PERSIST_IDS.forEach(id => {
+    if (data[id] != null && data[id] !== '') document.getElementById(id).value = data[id];
+  });
+})();
+PERSIST_IDS.forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input',  saveSettings);
+  el.addEventListener('change', saveSettings);
+});
 
 const savedTheme = localStorage.getItem('duel_theme');
 if (savedTheme) setTheme(savedTheme);

@@ -11,11 +11,15 @@ Duel is a single-file browser tool for running two Claude API sessions side by s
 ## What it does
 
 - Two independent panes — **α Alpha** and **β Beta** — each with its own model, system prompt, and conversation history
+- **Streaming** — responses render token-by-token live in each pane (both panes stream in parallel)
 - **Route selector** — send to Alpha only, Both (parallel), or Beta only
 - **Cross-send** — send any response from one pane to the other as a new user message
+- **Presets** — one-click system-prompt pairs (Sceptic ⚔ Builder, Red ⚔ Blue team, Line ⚔ Dev editor)
+- **Configurable max tokens** — set the per-reply output budget; truncated replies are flagged
 - **File attachments** — images (vision), PDFs, text/code files; drag and drop works
 - **Export MD** — downloads both conversation threads as a timestamped Markdown file
 - **Four themes** — Parchment, Folio (default), Obsidian, Modern
+- **Persistence** — system prompts, model choices, max tokens, and theme survive a refresh (API key kept in `sessionStorage`)
 - Enter = newline. Send = button.
 
 ## What it's for
@@ -51,6 +55,7 @@ open duel/index.html
 - API key never leaves the browser except in direct calls to `api.anthropic.com`
 - Uses `anthropic-dangerous-direct-browser-access: true` header for direct browser API access (BYOK pattern)
 - No backend, no analytics, no logging
+- Responses stream over SSE (`stream: true`), parsed from the `fetch` body reader — no SDK
 - File attachments: images → base64 vision blocks, PDFs → document blocks, text/code → fenced code blocks prepended to message
 
 ## Models supported
