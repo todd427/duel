@@ -19,6 +19,7 @@ Duel is a single-file browser tool for running two Claude API sessions side by s
 - **Presets** — one-click system-prompt pairs (Sceptic ⚔ Builder, Red ⚔ Blue team, Line ⚔ Dev editor)
 - **Configurable max tokens** — set the per-reply output budget; truncated replies are flagged
 - **File attachments** — images (vision), PDFs, text/code files; drag and drop works
+- **Spend tracking** — a running session cost + token totals, computed per-model from the API's `usage`, shown in the header; click to reset
 - **Export MD** — downloads both conversation threads as a timestamped Markdown file
 - **Four themes** — Parchment, Folio (default), Obsidian, Modern — all WCAG AAA (≥7:1 text contrast)
 - **Persistence** — system prompts, model choices, max tokens, theme, and toggles survive a refresh (no secrets stored client-side)

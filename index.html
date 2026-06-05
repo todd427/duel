@@ -688,6 +688,7 @@ textarea#prompt::placeholder { color: var(--text-faint); }
       <span>max tok</span>
       <input type="number" id="maxTokens" min="256" max="64000" step="256" value="4096">
     </label>
+    <button class="icon-btn" id="spendBtn" onclick="resetSpend()" title="Session spend · click to reset">$0.0000</button>
     <button class="icon-btn" onclick="exportMd()">Export MD</button>
   </div>
 </header>
@@ -968,6 +969,39 @@ function showError(side, msg) {
 
 function setStatus(msg) { document.getElementById('status').textContent = msg; }
 
+// ── Spend tracking ────────────────────────────────────────────
+// Priced per 1M tokens. Cache reads ≈ 0.1× input, cache writes ≈ 1.25× input.
+const PRICING = {
+  'claude-opus-4-8':   { in: 5, out: 25 },
+  'claude-opus-4-7':   { in: 5, out: 25 },
+  'claude-opus-4-6':   { in: 5, out: 25 },
+  'claude-sonnet-4-6': { in: 3, out: 15 },
+  'claude-haiku-4-5':  { in: 1, out: 5 },
+};
+let spend = { usd: 0, in: 0, out: 0 };
+try { spend = Object.assign(spend, JSON.parse(localStorage.getItem('duel_spend') || '{}')); } catch {}
+
+function recordUsage(model, u) {
+  const p = PRICING[model] || { in: 5, out: 25 };  // default to Opus-tier if unknown
+  spend.usd += (u.in * p.in + u.cr * p.in * 0.1 + u.cc * p.in * 1.25 + u.out * p.out) / 1e6;
+  spend.in  += u.in + u.cr + u.cc;
+  spend.out += u.out;
+  try { localStorage.setItem('duel_spend', JSON.stringify(spend)); } catch {}
+  renderSpend();
+}
+function renderSpend() {
+  const el = document.getElementById('spendBtn');
+  if (!el) return;
+  el.textContent = '$' + spend.usd.toFixed(4);
+  el.title = `Session spend · in ${spend.in.toLocaleString()} tok · out ${spend.out.toLocaleString()} tok · click to reset`;
+}
+function resetSpend() {
+  if (!confirm('Reset the session spend counter?')) return;
+  spend = { usd: 0, in: 0, out: 0 };
+  localStorage.setItem('duel_spend', JSON.stringify(spend));
+  renderSpend();
+}
+
 // ── Max output tokens ─────────────────────────────────────────
 function maxTokens() {
   const v = parseInt(document.getElementById('maxTokens').value, 10);
@@ -1058,6 +1092,7 @@ async function streamClaude(side, userText, attachments, hooks) {
     let buffer = '';
     const blocks = [];        // reconstructed assistant content blocks
     const partial = {};       // index -> partial tool-input JSON
+    const u = { in: 0, out: 0, cr: 0, cc: 0 };  // token usage for this response
     stopReason = null;
 
     while (true) {
@@ -1097,14 +1132,22 @@ async function streamClaude(side, userText, attachments, hooks) {
               else if (b.name === 'web_fetch') hooks.onTool(`🌐 fetched: ${b.input?.url ?? ''}`);
               else hooks.onTool(`🛠 ${b.name}`);
             }
-          } else if (evt.type === 'message_delta' && evt.delta?.stop_reason) {
-            stopReason = evt.delta.stop_reason;
+          } else if (evt.type === 'message_start') {
+            const mu = evt.message?.usage || {};
+            u.in = mu.input_tokens || 0;
+            u.cr = mu.cache_read_input_tokens || 0;
+            u.cc = mu.cache_creation_input_tokens || 0;
+          } else if (evt.type === 'message_delta') {
+            if (evt.delta?.stop_reason) stopReason = evt.delta.stop_reason;
+            if (evt.usage?.output_tokens != null) u.out = evt.usage.output_tokens;
           } else if (evt.type === 'error') {
             throw new Error(evt.error?.message || 'stream error');
           }
         }
       }
     }
+
+    recordUsage(model, u);   // tally spend for this response
 
     // Preserve the full turn (text + tool blocks) so server-tool context
     // survives, and so a pause_turn can be resumed by re-sending.
@@ -1239,6 +1282,8 @@ inputArea.addEventListener('drop', e => {
 const webToggle = document.getElementById('webToggle');
 webToggle.checked = (localStorage.getItem('duel_web') ?? '1') === '1';
 webToggle.addEventListener('change', () => localStorage.setItem('duel_web', webToggle.checked ? '1' : '0'));
+
+renderSpend();   // restore the persisted spend readout on load
 
 // ── Presets ───────────────────────────────────────────────────
 const PRESETS = {

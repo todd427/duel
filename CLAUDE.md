@@ -28,6 +28,7 @@ The frontend is one file (`index.html`); the backend is `functions/api/chat.js`.
 - **`buildContent(text, attachments)`** — converts pending attachments into Anthropic content blocks: images → base64 `image` blocks, PDFs → `document` blocks, text/code → fenced code prepended as text. `pendingFiles` holds staged attachments; `attachFiles`/`removeFile`/`renderStrip` manage the attach strip.
 - **`renderMd(text)`** — a small hand-rolled Markdown renderer (code fences, inline code, lists, paragraphs). There is no Markdown library.
 - **`exportMd()`** — serializes both `histories` into a single timestamped Markdown file for download.
+- **Spend tracking** — `recordUsage(model, u)` runs once per response with usage parsed from the stream (`message_start` → input/cache tokens, `message_delta` → output tokens), priced via the `PRICING` map (per-1M; cache read ≈0.1×, write ≈1.25×), accumulated into `spend` (persisted `localStorage` `duel_spend`), shown in `#spendBtn` (click → `resetSpend()`). Update `PRICING` when prices or the model list change (it's separate from the `<select>` options). Cost excludes web-search/tool surcharges — it's token-based.
 
 ## Conventions & constraints
 
