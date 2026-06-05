@@ -155,29 +155,6 @@ header {
 
 .header-spacer { flex: 1; }
 
-.api-label {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  color: var(--text-dim);
-  text-transform: uppercase;
-}
-
-input#apiKey {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text);
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 11px;
-  padding: 6px 10px;
-  width: 220px;
-  outline: none;
-  transition: border-color 0.15s;
-}
-input#apiKey:focus { border-color: var(--left-accent); }
-input#apiKey::placeholder { color: var(--text-faint); }
-
 /* ── Theme switcher ────────────────────────────────────────── */
 .theme-btns { display: flex; gap: 4px; }
 
@@ -292,28 +269,12 @@ select.preset-sel:hover { border-color: var(--text-dim); color: var(--text); }
   width: 56px;
   flex-shrink: 0;
 }
-.ctx-row input[type="password"] {
-  flex: 1;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  color: var(--text);
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 11px;
-  padding: 4px 8px;
-  outline: none;
-}
-.ctx-row input[type="password"]:focus { border-color: var(--left-accent); }
 .ctx-note {
   font-family: 'IBM Plex Sans', sans-serif;
   font-size: 11px;
   line-height: 1.5;
   color: var(--text-dim);
 }
-/* Hosted (no API key) = toggles only; BYOK (key set) = show token fields */
-.ctx-panel:not(.byok) .ctx-row input[type="password"] { display: none; }
-.ctx-panel:not(.byok) .ctx-note-byok   { display: none; }
-.ctx-panel.byok       .ctx-note-hosted { display: none; }
 
 .tool-trace { display: flex; flex-direction: column; gap: 4px; }
 .tool-trace:not(:empty) { margin-bottom: 6px; }
@@ -617,21 +578,23 @@ textarea.sys-prompt:focus { color: var(--text); }
 .route-btns { display: flex; gap: 4px; }
 
 .route-btn {
-  background: var(--surface2);
-  border: 1px solid var(--border);
+  background: transparent;
+  border: 2px solid var(--border);   /* 2px on all states → no layout shift when active */
   border-radius: 5px;
   color: var(--text-dim);
   cursor: pointer;
   font-family: 'IBM Plex Mono', monospace;
   font-size: 10px;
+  font-weight: 400;
   letter-spacing: 0.05em;
   padding: 4px 12px;
   transition: all 0.15s;
 }
-.route-btn:hover { color: var(--text); }
-.route-btn.active-left  { background: var(--left-bg);  border-color: var(--left-border);  color: var(--left-ink); }
-.route-btn.active-both  { background: var(--tag-bg);   border-color: var(--text-dim);     color: var(--text); }
-.route-btn.active-right { background: var(--right-bg); border-color: var(--right-border); color: var(--right-ink); }
+.route-btn:hover { color: var(--text); border-color: var(--text-dim); }
+/* Active = vivid full-accent 2px border + tint fill + bold; inactive stays flat/dim */
+.route-btn.active-left  { background: var(--left-bg);  border-color: var(--left-accent);  color: var(--left-ink);  font-weight: 700; }
+.route-btn.active-both  { background: var(--tag-bg);   border-color: var(--text);         color: var(--text);      font-weight: 700; }
+.route-btn.active-right { background: var(--right-bg); border-color: var(--right-accent); color: var(--right-ink); font-weight: 700; }
 
 .status {
   font-family: 'IBM Plex Mono', monospace;
@@ -760,15 +723,12 @@ textarea#prompt::placeholder { color: var(--text-faint); }
         <label class="ctx-row">
           <input type="checkbox" id="mcp-mnemos-on">
           <span class="ctx-name">Mnemos</span>
-          <input type="password" id="mcp-mnemos" placeholder="OAuth token" autocomplete="off">
         </label>
         <label class="ctx-row">
           <input type="checkbox" id="mcp-rialu-on">
           <span class="ctx-name">Rialú</span>
-          <input type="password" id="mcp-rialu" placeholder="OAuth token" autocomplete="off">
         </label>
-        <div class="ctx-note ctx-note-hosted">Toggle a server on — tokens live server-side. Read-only (Mnemos search · Rialú project reads).</div>
-        <div class="ctx-note ctx-note-byok">Paste a bearer token per server (BYOK / local mode). Read-only (Mnemos search · Rialú project reads).</div>
+        <div class="ctx-note">Toggle a server on — read-only (Mnemos search · Rialú project reads).</div>
       </div>
     </div>
     <select class="preset-sel" id="presetSel" onchange="applyPreset(this.value)" title="Load a system-prompt preset into both panes">
@@ -784,8 +744,6 @@ textarea#prompt::placeholder { color: var(--text-faint); }
     </label>
     <button class="icon-btn" onclick="exportMd()">Export MD</button>
   </div>
-  <span class="api-label">api key</span>
-  <input type="password" id="apiKey" placeholder="optional — blank uses hosted proxy" autocomplete="off">
 </header>
 
 <div class="panes">
@@ -1116,54 +1074,14 @@ function finalizeAssistant(side, h, fullText, stopReason) {
   h.container.scrollTop = h.container.scrollHeight;
 }
 
-// ── Web access (server-side tools) ────────────────────────────
-// Anthropic-hosted web_search + web_fetch run on Anthropic's infra (no backend
-// here). web_fetch can only read URLs already in context, so pairing it with
-// web_search lets "look at example.com/x" resolve via search → fetch.
-function webTools() {
-  if (!document.getElementById('webToggle')?.checked) return null;
-  return [
-    { type: 'web_search_20250305', name: 'web_search', max_uses: 5 },
-    { type: 'web_fetch_20250910',  name: 'web_fetch',  max_uses: 5,
-      citations: { enabled: true }, max_content_tokens: 50000 },
-  ];
-}
 
-// ── Read-only MCP context (FoxxeLabs servers) ─────────────────
-// Server-side MCP connector: Anthropic calls these servers (no backend here).
-// Both use OAuth 2.1 — paste a bearer token per server (sessionStorage).
-// Read-only is enforced by allow-listing only non-mutating tools.
-const MCP_SERVERS = {
-  mnemos: { url: 'https://mnemos.foxxelabs.ie/mcp', label: 'Mnemos',
-            readonly: ['query_memory','get_belief_context','get_stats','get_doc_count','list_filters'] },
-  rialu:  { url: 'https://rialu.ie/mcp', label: 'Rialú',
-            readonly: ['list_projects','get_project'] },
-};
-
-function mcpConfig() {
-  const servers = [], tools = [];
-  for (const [id, cfg] of Object.entries(MCP_SERVERS)) {
-    if (localStorage.getItem('duel_mcp_' + id + '_on') !== '1') continue;
-    const token = sessionStorage.getItem('duel_mcp_' + id) || '';
-    if (!token) continue;
-    servers.push({ type: 'url', url: cfg.url, name: id, authorization_token: token });
-    const configs = {};
-    cfg.readonly.forEach(t => { configs[t] = { enabled: true }; });   // allow-list
-    tools.push({ type: 'mcp_toolset', mcp_server_name: id,
-                 default_config: { enabled: false }, configs });
-  }
-  return servers.length ? { servers, tools } : null;
-}
-
-// ── Claude API call (streaming SSE, with server tools) ────────
+// ── Claude API call (streaming SSE via the hosted proxy) ──────
+// The Cloudflare Pages Function (/api/chat) injects the API key, web tools,
+// and Mnemos/Rialú MCP servers + tokens server-side. The browser holds none.
 // hooks: { onText(fullText), onTool(label) }
 async function streamClaude(side, userText, attachments, hooks) {
-  const apiKey = document.getElementById('apiKey').value.trim();
-  const useProxy = !apiKey;   // no key → hosted /api/chat proxy (secrets server-side)
-  const model  = document.getElementById('model-' + side).value;
-  const sys    = document.getElementById('sys-' + side).value.trim();
-  const tools  = webTools();
-  const mcp    = mcpConfig();
+  const model = document.getElementById('model-' + side).value;
+  const sys   = document.getElementById('sys-' + side).value.trim();
 
   const content = buildContent(userText, attachments);
   histories[side].push({ role: 'user', content });
@@ -1172,38 +1090,17 @@ async function streamClaude(side, userText, attachments, hooks) {
 
   // Loop only to resume across pause_turn (server-tool iteration cap)
   while (true) {
-    // Hosted: the Cloudflare Pages Function injects the key + MCP tokens
-    // server-side. BYOK/local (a key is present): call Anthropic directly.
-    let res;
-    if (useProxy) {
-      res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model, system: sys || undefined, messages: histories[side],
-          max_tokens: maxTokens(),
-          web:    !!document.getElementById('webToggle')?.checked,
-          mnemos: !!document.getElementById('mcp-mnemos-on')?.checked,
-          rialu:  !!document.getElementById('mcp-rialu-on')?.checked,
-        })
-      });
-    } else {
-      const body = { model, max_tokens: maxTokens(), messages: histories[side], stream: true };
-      if (sys) body.system = sys;
-      const allTools = [ ...(tools || []), ...(mcp?.tools || []) ];
-      if (allTools.length) body.tools = allTools;
-      if (mcp) body.mcp_servers = mcp.servers;
-      const headers = {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      };
-      if (mcp) headers['anthropic-beta'] = 'mcp-client-2025-11-20';
-      res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST', headers, body: JSON.stringify(body)
-      });
-    }
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model, system: sys || undefined, messages: histories[side],
+        max_tokens: maxTokens(),
+        web:    !!document.getElementById('webToggle')?.checked,
+        mnemos: !!document.getElementById('mcp-mnemos-on')?.checked,
+        rialu:  !!document.getElementById('mcp-rialu-on')?.checked,
+      })
+    });
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -1300,8 +1197,6 @@ async function send() {
 
   if (!prompt && attachments.length === 0) return;
 
-  const apiKey = document.getElementById('apiKey').value.trim();
-
   const sides = route === 'both' ? ['left','right'] : [route];
 
   busy = true;
@@ -1329,8 +1224,6 @@ async function send() {
 // ── Cross-send ────────────────────────────────────────────────
 async function crossSend(content, targetSide) {
   if (busy) return;
-
-  const apiKey = document.getElementById('apiKey').value.trim();
 
   busy = true;
   document.getElementById('sendBtn').disabled = true;
@@ -1396,16 +1289,6 @@ inputArea.addEventListener('drop', e => {
   if (e.dataTransfer.files.length) attachFiles(e.dataTransfer.files);
 });
 
-// ── Persist settings ──────────────────────────────────────────
-const keyInput = document.getElementById('apiKey');
-const saved = sessionStorage.getItem('duel_key');
-if (saved) keyInput.value = saved;
-keyInput.addEventListener('input', () => {
-  sessionStorage.setItem('duel_key', keyInput.value);
-  updateCtxMode();
-});
-updateCtxMode();
-
 // ── Web access toggle (persisted; default on) ─────────────────
 const webToggle = document.getElementById('webToggle');
 webToggle.checked = (localStorage.getItem('duel_web') ?? '1') === '1';
@@ -1416,22 +1299,14 @@ function toggleCtx() {
   const p = document.getElementById('ctxPanel');
   p.hidden = !p.hidden;
 }
-// Show token fields only in BYOK mode (an API key is set); hosted = toggles only.
-function updateCtxMode() {
-  const byok = !!document.getElementById('apiKey').value.trim();
-  document.getElementById('ctxPanel').classList.toggle('byok', byok);
-}
 document.addEventListener('click', e => {
   const wrap = document.querySelector('.ctx-wrap');
   if (wrap && !wrap.contains(e.target)) document.getElementById('ctxPanel').hidden = true;
 });
 ['mnemos', 'rialu'].forEach(id => {
-  const on  = document.getElementById('mcp-' + id + '-on');
-  const tok = document.getElementById('mcp-' + id);
+  const on = document.getElementById('mcp-' + id + '-on');
   on.checked = localStorage.getItem('duel_mcp_' + id + '_on') === '1';
-  tok.value  = sessionStorage.getItem('duel_mcp_' + id) || '';
   on.addEventListener('change', () => localStorage.setItem('duel_mcp_' + id + '_on', on.checked ? '1' : '0'));
-  tok.addEventListener('input', () => sessionStorage.setItem('duel_mcp_' + id, tok.value));
 });
 
 // ── Presets ───────────────────────────────────────────────────

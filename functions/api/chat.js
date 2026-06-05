@@ -12,12 +12,12 @@
 const MCP = {
   mnemos: {
     url: 'https://mnemos.foxxelabs.ie/mcp',
-    tokenVar: 'MNEMOS_MCP_TOKEN',
+    tokenVars: ['MNEMOS_MCP_STATIC_TOKEN', 'MNEMOS_MCP_TOKEN'],
     readonly: ['query_memory', 'get_belief_context', 'get_stats', 'get_doc_count', 'list_filters'],
   },
   rialu: {
     url: 'https://rialu.ie/mcp',
-    tokenVar: 'RIALU_MCP_TOKEN',
+    tokenVars: ['RIALU_MCP_STATIC_TOKEN', 'RIALU_MCP_TOKEN'],
     readonly: ['list_projects', 'get_project'],
   },
 };
@@ -54,7 +54,7 @@ export async function onRequestPost({ request, env }) {
   for (const id of ['mnemos', 'rialu']) {
     if (!b[id]) continue;
     const cfg = MCP[id];
-    const token = env[cfg.tokenVar];
+    const token = cfg.tokenVars.map(v => env[v]).find(Boolean);
     if (!token) continue;  // requested but not configured on the server — skip silently
     mcpServers.push({ type: 'url', url: cfg.url, name: id, authorization_token: token });
     const configs = {};

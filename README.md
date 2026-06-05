@@ -13,7 +13,7 @@ Duel is a single-file browser tool for running two Claude API sessions side by s
 - Two independent panes — **α Alpha** and **β Beta** — each with its own model, system prompt, and conversation history
 - **Streaming** — responses render token-by-token live in each pane (both panes stream in parallel)
 - **Web access** — optional `🌐 Web` toggle gives both panes Anthropic-hosted web search + fetch (server-side); tool activity is shown inline
-- **Context (read-only)** — optional `🧠 Context` panel connects Mnemos (memory corpus) + Rialú (project state) over MCP, so both panes can ground answers in *your* world; read-only, BYO OAuth token per server
+- **Context (read-only)** — optional `🧠 Context` panel connects Mnemos (memory corpus) + Rialú (project state) over MCP, so both panes can ground answers in *your* world; read-only, tokens injected server-side
 - **Route selector** — send to Alpha only, Both (parallel), or Beta only
 - **Cross-send** — send any response from one pane to the other as a new user message
 - **Presets** — one-click system-prompt pairs (Sceptic ⚔ Builder, Red ⚔ Blue team, Line ⚔ Dev editor)
@@ -21,7 +21,7 @@ Duel is a single-file browser tool for running two Claude API sessions side by s
 - **File attachments** — images (vision), PDFs, text/code files; drag and drop works
 - **Export MD** — downloads both conversation threads as a timestamped Markdown file
 - **Four themes** — Parchment, Folio (default), Obsidian, Modern — all WCAG AAA (≥7:1 text contrast)
-- **Persistence** — system prompts, model choices, max tokens, and theme survive a refresh (API key kept in `sessionStorage`)
+- **Persistence** — system prompts, model choices, max tokens, theme, and toggles survive a refresh (no secrets stored client-side)
 - Enter = newline. Send = button.
 
 ## What it's for
@@ -37,30 +37,29 @@ Also useful for: writing feedback, argument stress-testing, comparing reasoning 
 
 ## Requirements
 
-- **Hosted:** nothing — the key lives server-side (Cloudflare Pages Function), so you just sign in.
-- **Local / standalone:** an [Anthropic API key](https://console.anthropic.com) — bring your own, stored in `sessionStorage`, sent only to `api.anthropic.com`.
+- **To use it:** nothing — visit the hosted site and sign in. The Anthropic key and any context tokens live server-side (Cloudflare Pages Function); the browser holds no secrets.
+- **To self-host:** a Cloudflare Pages project (auto-deploy from the repo) with `ANTHROPIC_API_KEY` set as an env var. For the optional Mnemos/Rialú context, add `RIALU_MCP_STATIC_TOKEN` / `MNEMOS_MCP_STATIC_TOKEN`.
 - A modern browser.
 
 ## Usage
 
-**Hosted:** visit [duel.foxxelabs.ie](https://duel.foxxelabs.ie) — sign in via Cloudflare Access. No API key to enter; a Pages Function injects the key and any context tokens server-side.
+**Hosted:** visit [duel.foxxelabs.ie](https://duel.foxxelabs.ie) — sign in via Cloudflare Access. Nothing to configure; a Pages Function injects the key and context tokens server-side.
 
-**Local:** clone the repo, open `index.html` directly in a browser, and paste your own API key (with no proxy present, it calls Anthropic directly). No build step, no dependencies.
+**Local dev:** clone the repo and run it with Wrangler so the `/api/chat` function is available:
 
 ```bash
 git clone https://github.com/todd427/duel
-open duel/index.html
+cd duel && npx wrangler pages dev .   # needs ANTHROPIC_API_KEY in the env
 ```
 
 ## Technical notes
 
 - Single-file frontend (`index.html`) — no build step, no npm, no framework
-- Hosted deploy adds one Cloudflare Pages Function (`functions/api/chat.js`) — a server-side proxy that injects the Anthropic key + MCP tokens and streams the response back; the browser holds no secrets
-- BYOK/local path uses the `anthropic-dangerous-direct-browser-access: true` header to call `api.anthropic.com` directly
-- No analytics, no logging; the only backend is the stateless Pages Function
+- One Cloudflare Pages Function (`functions/api/chat.js`) is the only backend — a stateless proxy that injects the Anthropic key + MCP tokens and streams the response back; the browser holds no secrets and sends only feature toggles
+- No analytics, no logging
 - Responses stream over SSE (`stream: true`), parsed from the `fetch` body reader — no SDK
-- Web access uses Anthropic's server-side `web_search` + `web_fetch` tools (run on Anthropic's infra, not the browser); no extra backend, no API key beyond your own
-- Context uses Anthropic's MCP connector (server-side) against Mnemos/Rialú with read-only tool allow-lists; OAuth bearer tokens are entered per server and kept in `sessionStorage`
+- Web access uses Anthropic's server-side `web_search` + `web_fetch` tools (run on Anthropic's infra, not the browser)
+- Context uses Anthropic's MCP connector (server-side) against Mnemos/Rialú with read-only tool allow-lists; bearer tokens are server-side env vars, never in the browser
 - File attachments: images → base64 vision blocks, PDFs → document blocks, text/code → fenced code blocks prepended to message
 
 ## Models supported
