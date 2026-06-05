@@ -162,7 +162,6 @@ header {
   color: var(--text-dim);
   text-transform: uppercase;
 }
-.api-label.needs-key { color: var(--error); font-weight: 700; }
 
 input#apiKey {
   background: var(--surface2);
@@ -178,16 +177,6 @@ input#apiKey {
 }
 input#apiKey:focus { border-color: var(--left-accent); }
 input#apiKey::placeholder { color: var(--text-faint); }
-input#apiKey.needs-key {
-  border-color: var(--error);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--error) 30%, transparent);
-  animation: shake 0.4s ease;
-}
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  20%, 60% { transform: translateX(-4px); }
-  40%, 80% { transform: translateX(4px); }
-}
 
 /* ── Theme switcher ────────────────────────────────────────── */
 .theme-btns { display: flex; gap: 4px; }
@@ -1070,17 +1059,6 @@ function showError(side, msg) {
 
 function setStatus(msg) { document.getElementById('status').textContent = msg; }
 
-// ── Missing-key feedback (loud) ───────────────────────────────
-function flagMissingKey() {
-  const k = document.getElementById('apiKey');
-  const lbl = document.querySelector('.api-label');
-  k.classList.remove('needs-key'); void k.offsetWidth;  // restart the shake
-  k.classList.add('needs-key');
-  if (lbl) lbl.classList.add('needs-key');
-  k.focus();
-  setStatus('⚠ Enter your API key first');
-}
-
 // ── Max output tokens ─────────────────────────────────────────
 function maxTokens() {
   const v = parseInt(document.getElementById('maxTokens').value, 10);
@@ -1417,11 +1395,7 @@ inputArea.addEventListener('drop', e => {
 const keyInput = document.getElementById('apiKey');
 const saved = sessionStorage.getItem('duel_key');
 if (saved) keyInput.value = saved;
-keyInput.addEventListener('input', () => {
-  sessionStorage.setItem('duel_key', keyInput.value);
-  keyInput.classList.remove('needs-key');
-  document.querySelector('.api-label')?.classList.remove('needs-key');
-});
+keyInput.addEventListener('input', () => sessionStorage.setItem('duel_key', keyInput.value));
 
 // ── Web access toggle (persisted; default on) ─────────────────
 const webToggle = document.getElementById('webToggle');
