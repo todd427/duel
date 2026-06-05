@@ -18,7 +18,7 @@ Duel is a single-file browser tool for running two Claude API sessions side by s
 - **Configurable max tokens** — set the per-reply output budget; truncated replies are flagged
 - **File attachments** — images (vision), PDFs, text/code files; drag and drop works
 - **Export MD** — downloads both conversation threads as a timestamped Markdown file
-- **Four themes** — Parchment, Folio (default), Obsidian, Modern
+- **Four themes** — Parchment, Folio (default), Obsidian, Modern — all WCAG AAA (≥7:1 text contrast)
 - **Persistence** — system prompts, model choices, max tokens, and theme survive a refresh (API key kept in `sessionStorage`)
 - Enter = newline. Send = button.
 

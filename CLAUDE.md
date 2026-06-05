@@ -29,6 +29,8 @@ Everything is one file. The script section (from ~line 674) is the whole app.
 
 - **Keep it single-file and dependency-free.** Do not introduce a build step, npm packages, or external script/CDN imports unless explicitly asked.
 - `left`/`right` are the internal identifiers; α/β/Alpha/Beta are display labels only.
+- **Accessibility: all four themes must hold WCAG AAA text contrast (≥7:1).** Each theme defines `--text` / `--text-dim` / `--text-faint` (all ≥7:1; dim ~8:1) plus `--left-ink` / `--right-ink` (text-legible accent variants — accents themselves are kept vivid for borders/dots/tints and are **not** contrast-safe as text), and `--error` / `--warn`. Use `--*-ink`/`--error`/`--warn` for any *text*; reserve `--*-accent` for borders/backgrounds. Don't apply `opacity` to already-dimmed text. If you touch theme colors, re-verify with the contrast math (composite alpha over `bg`/`surface`/`surface2`, worst case is `surface2`).
+- Missing API key is surfaced loudly via `flagMissingKey()` (focus + red shake on `#apiKey`, `.needs-key` on the label, status text); the `#apiKey` input listener clears `.needs-key` on type.
 - **Persistence:** theme in `localStorage` (`duel_theme`); API key in `sessionStorage` (`duel_key`); system prompts + model choices + max-tokens in `localStorage` (`duel_settings`, written by `saveSettings()` over `PERSIST_IDS`, restored on load). Four themes live as CSS via `data-t` attributes and `setTheme()`.
 - **Presets** (`PRESETS` + `applyPreset`) fill both `sys-<side>` textareas from the header `#presetSel` dropdown; add new pairs to the `PRESETS` map and a matching `<option>`.
 - Supported models are hardcoded in the two `<select id="model-<side>">` elements — update both panes when changing the list.
