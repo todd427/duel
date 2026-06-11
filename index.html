@@ -272,6 +272,7 @@ select.preset-sel:hover { border-color: var(--text-dim); color: var(--text); }
   color: var(--warn);
   margin-top: 6px;
 }
+.trunc-note.refusal { color: var(--error); }
 
 /* ── Panes ─────────────────────────────────────────────────── */
 .panes {
@@ -717,6 +718,7 @@ textarea#prompt::placeholder { color: var(--text-faint); }
       <span class="pane-sigil">α</span>
       <span class="pane-label">Alpha</span>
       <select class="model-sel" id="model-left">
+        <option value="claude-fable-5">Fable 5</option>
         <option value="claude-opus-4-8">Opus 4.8</option>
         <option value="claude-opus-4-7">Opus 4.7</option>
         <option value="claude-opus-4-6">Opus 4.6</option>
@@ -735,6 +737,7 @@ textarea#prompt::placeholder { color: var(--text-faint); }
       <span class="pane-sigil">β</span>
       <span class="pane-label">Beta</span>
       <select class="model-sel" id="model-right">
+        <option value="claude-fable-5">Fable 5</option>
         <option value="claude-opus-4-8">Opus 4.8</option>
         <option value="claude-opus-4-7">Opus 4.7</option>
         <option value="claude-opus-4-6">Opus 4.6</option>
@@ -998,6 +1001,7 @@ applyFont();
 // ── Spend tracking ────────────────────────────────────────────
 // Priced per 1M tokens. Cache reads ≈ 0.1× input, cache writes ≈ 1.25× input.
 const PRICING = {
+  'claude-fable-5':    { in: 10, out: 50 },
   'claude-opus-4-8':   { in: 5, out: 25 },
   'claude-opus-4-7':   { in: 5, out: 25 },
   'claude-opus-4-6':   { in: 5, out: 25 },
@@ -1068,6 +1072,11 @@ function finalizeAssistant(side, h, fullText, stopReason) {
     const note = document.createElement('div');
     note.className = 'trunc-note';
     note.textContent = '⚠ truncated — hit max tokens; raise “max tok” and ask it to continue';
+    h.wrapper.appendChild(note);
+  } else if (stopReason === 'refusal') {
+    const note = document.createElement('div');
+    note.className = 'trunc-note refusal';
+    note.textContent = '⚠ refused — model declined for safety reasons; rephrase or try a different model';
     h.wrapper.appendChild(note);
   }
   const xBtn = document.createElement('button');
