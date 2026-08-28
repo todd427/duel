@@ -249,6 +249,64 @@ select.preset-sel:hover { border-color: var(--text-dim); color: var(--text); }
 .web-toggle input { accent-color: var(--left-accent); cursor: pointer; margin: 0; }
 .web-toggle:has(input:checked) { color: var(--text); border-color: var(--left-accent); }
 
+/* ── MCP picker ────────────────────────────────────────────── */
+
+.mcp-wrap { position: relative; }
+.mcp-btn.on { color: var(--text); border-color: var(--left-accent); }
+.mcp-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  width: 300px;
+  max-height: 62vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.30);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+}
+.mcp-panel[hidden] { display: none; }
+.mcp-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 6px 8px;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+.mcp-panel-head b { color: var(--text); font-weight: 600; }
+.mcp-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 5px;
+  cursor: pointer;
+  color: var(--text-dim);
+}
+.mcp-row:hover { background: var(--surface2); }
+.mcp-row input { accent-color: var(--left-accent); cursor: pointer; margin: 2px 0 0; }
+.mcp-row.unwired { cursor: not-allowed; }
+.mcp-row.unwired input { cursor: not-allowed; }
+.mcp-name { color: var(--text); }
+.mcp-row.unwired .mcp-name { color: var(--text-dim); }
+.mcp-note { display: block; color: var(--text-faint); margin-top: 1px; }
+.mcp-badge {
+  color: var(--warn);
+  border: 1px solid var(--warn);
+  border-radius: 4px;
+  padding: 0 4px;
+  margin-left: 5px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
 .tool-trace { display: flex; flex-direction: column; gap: 4px; }
 .tool-trace:not(:empty) { margin-bottom: 6px; }
 .tool-chip {
@@ -690,6 +748,17 @@ textarea#prompt::placeholder { color: var(--text-faint); }
       <input type="checkbox" id="webToggle">
       <span>🌐 Web</span>
     </label>
+    <div class="mcp-wrap">
+      <button class="icon-btn mcp-btn" id="mcpBtn" onclick="toggleMcpPanel()"
+              title="Choose which MCP servers both panes can call">🧠 MCP</button>
+      <div class="mcp-panel" id="mcpPanel" hidden>
+        <div class="mcp-panel-head">
+          <b>MCP servers</b>
+          <span>read-only unless noted</span>
+        </div>
+        <div id="mcpList"></div>
+      </div>
+    </div>
     <select class="preset-sel" id="presetSel" onchange="applyPreset(this.value)" title="Load a system-prompt preset into both panes">
       <option value="">Presets…</option>
       <option value="archreview">Sceptic ⚔ Builder</option>
@@ -699,7 +768,7 @@ textarea#prompt::placeholder { color: var(--text-faint); }
     </select>
     <label class="maxtok" title="Max output tokens per reply">
       <span>max tok</span>
-      <input type="number" id="maxTokens" min="256" max="64000" step="256" value="4096">
+      <input type="number" id="maxTokens" min="256" max="128000" step="1024" value="32000">
     </label>
     <div class="fontctl" title="Text size (auto-scales with window; nudge here)">
       <button class="icon-btn" onclick="bumpFont(-1)" aria-label="Smaller text">A−</button>
@@ -719,10 +788,12 @@ textarea#prompt::placeholder { color: var(--text-faint); }
       <span class="pane-label">Alpha</span>
       <select class="model-sel" id="model-left">
         <option value="claude-fable-5">Fable 5</option>
+        <option value="claude-opus-5">Opus 5</option>
         <option value="claude-opus-4-8">Opus 4.8</option>
         <option value="claude-opus-4-7">Opus 4.7</option>
         <option value="claude-opus-4-6">Opus 4.6</option>
-        <option value="claude-sonnet-4-6" selected>Sonnet 4.6</option>
+        <option value="claude-sonnet-5" selected>Sonnet 5</option>
+        <option value="claude-sonnet-4-6">Sonnet 4.6</option>
         <option value="claude-haiku-4-5">Haiku 4.5</option>
       </select>
       <textarea class="sys-prompt" id="sys-left" placeholder="System prompt…"></textarea>
@@ -738,10 +809,12 @@ textarea#prompt::placeholder { color: var(--text-faint); }
       <span class="pane-label">Beta</span>
       <select class="model-sel" id="model-right">
         <option value="claude-fable-5">Fable 5</option>
+        <option value="claude-opus-5">Opus 5</option>
         <option value="claude-opus-4-8">Opus 4.8</option>
         <option value="claude-opus-4-7">Opus 4.7</option>
         <option value="claude-opus-4-6">Opus 4.6</option>
-        <option value="claude-sonnet-4-6" selected>Sonnet 4.6</option>
+        <option value="claude-sonnet-5" selected>Sonnet 5</option>
+        <option value="claude-sonnet-4-6">Sonnet 4.6</option>
         <option value="claude-haiku-4-5">Haiku 4.5</option>
       </select>
       <textarea class="sys-prompt" id="sys-right" placeholder="System prompt…"></textarea>
@@ -1002,9 +1075,11 @@ applyFont();
 // Priced per 1M tokens. Cache reads ≈ 0.1× input, cache writes ≈ 1.25× input.
 const PRICING = {
   'claude-fable-5':    { in: 10, out: 50 },
+  'claude-opus-5':     { in: 5, out: 25 },
   'claude-opus-4-8':   { in: 5, out: 25 },
   'claude-opus-4-7':   { in: 5, out: 25 },
   'claude-opus-4-6':   { in: 5, out: 25 },
+  'claude-sonnet-5':   { in: 2, out: 10 },
   'claude-sonnet-4-6': { in: 3, out: 15 },
   'claude-haiku-4-5':  { in: 1, out: 5 },
 };
@@ -1033,10 +1108,13 @@ function resetSpend() {
 }
 
 // ── Max output tokens ─────────────────────────────────────────
+const DEFAULT_MAX_TOKENS = 32000;
 function maxTokens() {
   const v = parseInt(document.getElementById('maxTokens').value, 10);
-  if (!Number.isFinite(v) || v < 256) return 4096;
-  return Math.min(v, 64000);  // 64K is valid for every model in the picker
+  if (!Number.isFinite(v) || v < 256) return DEFAULT_MAX_TOKENS;
+  // The proxy clamps again to the selected model's real ceiling (128K on the
+  // current models, 64K on Haiku 4.5), so the two panes can differ.
+  return Math.min(v, 128000);
 }
 
 // ── Live assistant bubble (streaming target) ──────────────────
@@ -1092,7 +1170,9 @@ function finalizeAssistant(side, h, fullText, stopReason) {
 
 // ── Claude API call (streaming SSE via the hosted proxy) ──────
 // The Cloudflare Pages Function (/api/chat) injects the API key, web tools,
-// and Mnemos/Rialú MCP servers + tokens server-side. The browser holds none.
+// and the selected MCP servers + their tokens server-side. The browser holds none.
+const label = (verb, arg) => arg ? `${verb}: ${arg}` : verb;
+
 // hooks: { onText(fullText), onTool(label) }
 async function streamClaude(side, userText, attachments, hooks) {
   const model = document.getElementById('model-' + side).value;
@@ -1112,8 +1192,7 @@ async function streamClaude(side, userText, attachments, hooks) {
         model, system: sys || undefined, messages: histories[side],
         max_tokens: maxTokens(),
         web:    !!document.getElementById('webToggle')?.checked,
-        mnemos: true,   // context always on (server-side; tools fire only when relevant)
-        rialu:  true,
+        mcp:    enabledMcp(),   // server ids; the proxy holds the tokens + allow-lists
       })
     });
 
@@ -1163,8 +1242,10 @@ async function streamClaude(side, userText, attachments, hooks) {
             if (b && (b.type === 'server_tool_use' || b.type === 'mcp_tool_use')) {
               try { b.input = JSON.parse(partial[evt.index] || '{}'); } catch {}
               if (b.type === 'mcp_tool_use') hooks.onTool(`🧠 ${b.server_name || 'mcp'}: ${b.name}`);
-              else if (b.name === 'web_search') hooks.onTool(`🔍 searched: ${b.input?.query ?? ''}`);
-              else if (b.name === 'web_fetch') hooks.onTool(`🌐 fetched: ${b.input?.url ?? ''}`);
+              // The _20260209 web tools run inside code execution and report an
+              // empty input, so only add the suffix when there is actually one.
+              else if (b.name === 'web_search') hooks.onTool(label('🔍 searched', b.input?.query));
+              else if (b.name === 'web_fetch') hooks.onTool(label('🌐 fetched', b.input?.url));
               else hooks.onTool(`🛠 ${b.name}`);
             }
           } else if (evt.type === 'message_start') {
@@ -1318,6 +1399,130 @@ const webToggle = document.getElementById('webToggle');
 webToggle.checked = (localStorage.getItem('duel_web') ?? '1') === '1';
 webToggle.addEventListener('change', () => localStorage.setItem('duel_web', webToggle.checked ? '1' : '0'));
 
+// ── MCP servers (persisted; which servers both panes may call) ─
+// The list comes from GET /api/chat — the registry lives only in
+// functions/api/chat.js, so adding or removing a server never touches this
+// file. The per-tool allow-list is enforced there too; this picker only
+// chooses servers.
+let MCP_SERVERS = [];        // [{id, label, note, writes, ready, tools, discovered}]
+const MCP_DEFAULT = ['mnemos', 'rialu'];   // the context that used to be always-on
+
+let mcpReady = null;   // Set of ids actually wired on this deploy; null until known
+const mcpOn = new Set((() => {
+  try {
+    const raw = localStorage.getItem('duel_mcp');
+    return raw ? JSON.parse(raw) : MCP_DEFAULT;
+  } catch { return MCP_DEFAULT; }
+})());
+
+// Straight from the persisted set — a send that beats the /api/chat round-trip
+// still carries the servers the user last chose.
+function enabledMcp() {
+  return [...mcpOn];
+}
+
+function saveMcp() {
+  localStorage.setItem('duel_mcp', JSON.stringify(enabledMcp()));
+}
+
+function toggleMcp(id, on) {
+  if (on) mcpOn.add(id); else mcpOn.delete(id);
+  saveMcp();
+  updateMcpBtn();   // never re-render the rows mid-click — it detaches the target
+}
+
+function toggleMcpPanel() {
+  const panel = document.getElementById('mcpPanel');
+  panel.hidden = !panel.hidden;
+}
+
+// Capture phase: runs before the row's own change handler, so `e.target` is
+// still attached and `closest()` can tell inside-the-panel from outside.
+document.addEventListener('click', e => {
+  const panel = document.getElementById('mcpPanel');
+  if (!panel || panel.hidden) return;
+  if (!e.target.closest('.mcp-wrap')) panel.hidden = true;
+}, true);
+
+function renderMcp() {
+  const list = document.getElementById('mcpList');
+  list.innerHTML = '';
+
+  if (!MCP_SERVERS.length) {
+    const empty = document.createElement('small');
+    empty.className = 'mcp-note';
+    empty.textContent = mcpReady === null ? 'Loading servers…' : 'No MCP servers configured.';
+    list.appendChild(empty);
+    updateMcpBtn();
+    return;
+  }
+
+  for (const srv of MCP_SERVERS) {
+    // A server with a token but nothing to expose is useless — and silently
+    // dropping it reads exactly like the server being down. Say so instead.
+    const usable = srv.ready && srv.tools > 0;
+    const on     = usable && mcpOn.has(srv.id);
+    const row = document.createElement('label');
+    row.className = 'mcp-row' + (usable ? '' : ' unwired');
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = on;
+    box.disabled = !usable;
+    box.addEventListener('change', () => toggleMcp(srv.id, box.checked));
+    const body = document.createElement('span');
+    const name = document.createElement('span');
+    name.className = 'mcp-name';
+    name.textContent = srv.label;
+    body.appendChild(name);
+    if (srv.writes) {
+      const badge = document.createElement('span');
+      badge.className = 'mcp-badge';
+      badge.textContent = 'writes';
+      body.appendChild(badge);
+    }
+    const note = document.createElement('small');
+    note.className = 'mcp-note';
+    if (!srv.ready)          note.textContent = 'no token configured on the server';
+    else if (!srv.tools)     note.textContent = 'unreachable — exposed no tools';
+    else note.textContent = `${srv.note} · ${srv.tools} tool${srv.tools === 1 ? '' : 's'}`
+                          + (srv.discovered ? ' (discovered)' : '');
+    body.appendChild(note);
+    row.append(box, body);
+    list.appendChild(row);
+  }
+  updateMcpBtn();
+}
+
+function updateMcpBtn() {
+  const n = enabledMcp().filter(id => mcpReady === null || mcpReady.has(id)).length;
+  const btn = document.getElementById('mcpBtn');
+  btn.textContent = n ? `\u{1F9E0} MCP \u00b7 ${n}` : '\u{1F9E0} MCP';
+  btn.classList.toggle('on', n > 0);
+}
+
+// Ask the proxy which servers exist and which are wired up on this deployment.
+fetch('/api/chat')
+  .then(r => r.ok ? r.json() : null)
+  .then(d => {
+    if (d && Array.isArray(d.servers)) {
+      MCP_SERVERS = d.servers;
+      mcpReady = new Set(d.servers.filter(s => s.ready && s.tools > 0).map(s => s.id));
+      // Forget servers the deploy no longer lists at all, so a removed one
+      // stops being sent forever. A server that is merely unreachable right
+      // now keeps its tick — that outage is usually transient.
+      const known = new Set(d.servers.map(s => s.id));
+      let pruned = false;
+      for (const id of [...mcpOn]) if (!known.has(id)) { mcpOn.delete(id); pruned = true; }
+      if (pruned) saveMcp();
+    } else {
+      mcpReady = new Set();
+    }
+    renderMcp();
+  })
+  .catch(() => { mcpReady = new Set(); renderMcp(); });
+
+renderMcp();
+
 renderSpend();   // restore the persisted spend readout on load
 
 // ── Presets ───────────────────────────────────────────────────
@@ -1360,6 +1565,15 @@ function saveSettings() {
   PERSIST_IDS.forEach(id => {
     if (data[id] != null && data[id] !== '') document.getElementById(id).value = data[id];
   });
+  // One-time bump off the old 4096 ceiling. It predates thinking coming out of
+  // the output budget, and left on Opus 5 / Fable 5 it truncates the answer to a
+  // preamble. Only moves someone still sitting on that old default.
+  if (!localStorage.getItem('duel_tokens_v2')) {
+    const el = document.getElementById('maxTokens');
+    if (parseInt(el.value, 10) <= 4096) el.value = String(DEFAULT_MAX_TOKENS);
+    localStorage.setItem('duel_tokens_v2', '1');
+    saveSettings();
+  }
 })();
 PERSIST_IDS.forEach(id => {
   const el = document.getElementById(id);
