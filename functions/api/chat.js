@@ -49,7 +49,10 @@ const BUILTIN = {
             'git_branch', 'git_checkout'],
   },
   taisce: {
-    url: 'https://taisce.irish/mcp',
+    // taisce.fly.dev, NOT the canonical taisce.irish: that host sits behind
+    // Cloudflare Access and the origin verifies the Access JWT, so it 403s a
+    // server-side dial. Anthropic connects with no browser.
+    url: 'https://taisce.fly.dev/mcp',
     label: 'Taisce', note: 'Vault metadata only — never reveals a secret',
     // Metadata only — reveal_*/store_*/delete_* are never enabled, so no secret
     // value can be pulled into a chat pane.
